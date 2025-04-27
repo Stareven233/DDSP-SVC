@@ -57,10 +57,10 @@ train:
   epochs: 8000
   interval_log: 200
   interval_val: 2000
-  interval_force_save: 5000
-  lr: 2.0e-4
-  decay_step: 40000
-  gamma: 0.5
-  weight_decay: 0
+  interval_force_save: 10000
+  lr: 0.0005
+  decay_step: 4000
+  gamma: 0.9
+  weight_decay: 0.1
   lambda_ddsp: 1
   save_opt: false
