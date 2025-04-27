@@ -1,3 +1,11 @@
+# SVC-Fusion: 不会去掉短音频、不会执行响度匹配
+# 预处理流程：重采样到44.1k，切分音频，挑选10个左右的验证集音频，执行ddspsvc.preprocess生成缓存文件
+# 前面2步用未鸟工具箱做，手动挑选验证集，执行ddspsvc.preprocess
+# cd D:\Software\SVC-Fusion\project
+# D:\Software\SVC-Fusion\project\.conda\python.exe fap/__main__.py resample dataset_raw/ tmp/resampled/ --mono
+# D:\Software\SVC-Fusion\project\.conda\python.exe -m ddspsvc_6_2.preprocess -c configs/ddsp6.2.yaml -d cuda:0
+# screen -S ddsp python train_reflow.py -c configs/reflow.yaml
+
 data:
   f0_extractor: 'rmvpe' # 'parselmouth', 'dio', 'harvest', 'crepe' or 'rmvpe'
   f0_min: 65 # about C2
@@ -16,6 +24,7 @@ data:
   valid_path: data/val # Create a folder named "audio" under this path and put the audio clip in it
   extensions: # List of extension included in the data collection
     - wav
+    - flac
 model:
   type: 'RectifiedFlow'
   win_length: 2048
@@ -36,22 +45,22 @@ infer:
   infer_step: 50
   method: 'euler' # 'euler', 'rk4'
 env:
-  expdir: exp/reflow-test
+  expdir: exp/megumin_chat
   gpu_id: 0
 train:
   num_workers: 2 # If your cpu and gpu are both very strong, set to 0 may be faster!
-  amp_dtype: fp16 # fp32, fp16 or bf16 (fp16 or bf16 may be faster if it is supported by your gpu)
+  amp_dtype: bf16 # fp32, fp16 or bf16 (fp16 or bf16 may be faster if it is supported by your gpu)
   batch_size: 48
   cache_all_data: true # Save Internal-Memory or Graphics-Memory if it is false, but may be slow
   cache_device: 'cpu' # Set to 'cuda' to cache the data into the Graphics-Memory, fastest speed for strong gpu
   cache_fp16: true
-  epochs: 100000
-  interval_log: 1
+  epochs: 8000
+  interval_log: 200
   interval_val: 2000
-  interval_force_save: 10000
-  lr: 0.0002
-  decay_step: 50000
+  interval_force_save: 5000
+  lr: 2.0e-4
+  decay_step: 40000
   gamma: 0.5
   weight_decay: 0
   lambda_ddsp: 1
-  save_opt: false  
+  save_opt: false

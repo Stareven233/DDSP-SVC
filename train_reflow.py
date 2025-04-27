@@ -1,5 +1,12 @@
+'''
+screen -S ddsp python train_reflow.py -c configs/reflow.yaml
+screen -S ddsp python train_reflow.py -c configs/reflow_fritia.yaml
+'''
+
 import os
 import argparse
+import traceback
+
 import torch
 from torch.optim import lr_scheduler
 from logger import utils
@@ -73,7 +80,12 @@ if __name__ == '__main__':
                     
     # datas
     loader_train, loader_valid = get_data_loaders(args, whole_audio=False)
-    
-    # run
-    train(args, initial_global_step, model, optimizer, scheduler, vocoder, loader_train, loader_valid)
-    
+    exp_name = args.env.expdir.split('/')[-1]
+    try:
+        print(f'{exp_name} 开始训练！')
+        train(args, initial_global_step, model, optimizer, scheduler, vocoder, loader_train, loader_valid)
+        print('结束训练！')
+    except Exception:
+        err_log = f'error_{exp_name}.log'
+        traceback.print_exc(file=open(err_log, 'w', encoding='utf-8'))
+        raise

@@ -215,7 +215,6 @@ def train(args, initial_global_step, model, optimizer, scheduler, vocoder, loade
         raise ValueError(' [x] Unknown amp_dtype: ' + args.train.amp_dtype)
     for epoch in range(start_epoch, args.train.epochs):
         for batch_idx, data in enumerate(loader_train):
-            saver.global_step_increment()
             optimizer.zero_grad()
 
             # unpack data
@@ -231,7 +230,7 @@ def train(args, initial_global_step, model, optimizer, scheduler, vocoder, loade
                 with autocast(device_type=args.device, dtype=dtype):
                     ddsp_loss, reflow_loss=model(data['units'], data['f0'], data['volume'], data['spk_id'], 
                                     aug_shift=data['aug_shift'], vocoder=vocoder, gt_spec=data['mel'].float(), infer=False, t_start=args.model.t_start)
-            
+
             # handle nan loss
             if torch.isnan(ddsp_loss):
                 print(' [x] nan ddsp_loss ')
@@ -252,7 +251,7 @@ def train(args, initial_global_step, model, optimizer, scheduler, vocoder, loade
                     scaler.step(optimizer)
                     scaler.update()
                 scheduler.step()
-                
+
             # log loss
             if saver.global_step % args.train.interval_log == 0:
                 current_lr =  optimizer.param_groups[0]['lr']
@@ -279,10 +278,11 @@ def train(args, initial_global_step, model, optimizer, scheduler, vocoder, loade
             
             # validation
             if saver.global_step % args.train.interval_val == 0:
+                model.eval()
                 optimizer_save = optimizer if args.train.save_opt else None
                 
                 # save latest
-                saver.save_model(model, optimizer_save, postfix=f'{saver.global_step}')
+                saver.global_step>0 and saver.save_model(model, optimizer_save, postfix=f'{saver.global_step}')
                 last_val_step = saver.global_step - args.train.interval_val
                 if last_val_step % args.train.interval_force_save != 0:
                     saver.delete_model(postfix=f'{last_val_step}')
@@ -306,4 +306,4 @@ def train(args, initial_global_step, model, optimizer, scheduler, vocoder, loade
                 
                 model.train()
 
-                          
+            saver.global_step_increment()
