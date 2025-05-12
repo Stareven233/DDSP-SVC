@@ -45,7 +45,7 @@ infer:
   infer_step: 50
   method: 'euler' # 'euler', 'rk4'
 env:
-  expdir: exp/megumin_chat
+  expdir: exp/megumin
   gpu_id: 0
 train:
   num_workers: 2 # If your cpu and gpu are both very strong, set to 0 may be faster!

@@ -9,6 +9,10 @@ from torch import autocast
 from torch.cuda.amp import GradScaler
 from nsf_hifigan.nvSTFT import STFT
 
+
+is_gt_logged = False
+
+
 def calculate_mel_snr(gt_mel, pred_mel):
     # 计算误差图像
     error_image = gt_mel - pred_mel
@@ -122,12 +126,15 @@ def test(args, model, vocoder, loader_test, saver):
             saver.log_spec(data['name'][0], data['mel'], mel)
             
             # log audio
-            path_audio = os.path.join(args.data.valid_path, 'audio', data['name_ext'][0])
-            audio, sr = librosa.load(path_audio, sr=args.data.sampling_rate)
-            if len(audio.shape) > 1:
-                audio = librosa.to_mono(audio)
-            audio = torch.from_numpy(audio).unsqueeze(0).to(signal)
-            saver.log_audio({fn+'/gt.wav': audio, fn+'/pred.wav': signal})
+            if not is_gt_logged:
+                path_audio = os.path.join(args.data.valid_path, 'audio', data['name_ext'][0])
+                audio, sr = librosa.load(path_audio, sr=args.data.sampling_rate)
+                if len(audio.shape) > 1:
+                    audio = librosa.to_mono(audio)
+                audio = torch.from_numpy(audio).unsqueeze(0).to(signal)
+                saver.log_audio({fn+'/gt.wav': audio, fn+'/pred.wav': signal})
+            else:
+                saver.log_audio({fn+'/pred.wav': signal})
 
             WAV2MEL = STFT(
                         sr=args.data.sampling_rate,

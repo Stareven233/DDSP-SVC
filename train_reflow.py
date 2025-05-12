@@ -1,6 +1,7 @@
 '''
 screen -S ddsp python train_reflow.py -c configs/reflow.yaml
 screen -S ddsp python train_reflow.py -c configs/reflow_fritia.yaml
+screen -S ddsp python train_reflow.py -c configs/reflow_megumin.yaml
 '''
 
 import os
@@ -74,7 +75,7 @@ if __name__ == '__main__':
         param_group['initial_lr'] = args.train.lr
         param_group['lr'] = args.train.lr * args.train.gamma ** max((initial_global_step - 2) // args.train.decay_step, 0)
     scheduler = lr_scheduler.StepLR(optimizer, step_size=args.train.decay_step, gamma=args.train.gamma, last_epoch=initial_global_step-2)
-                        
+
     # datas
     loader_train, loader_valid = get_data_loaders(args, whole_audio=False)
     exp_name = args.env.expdir.split('/')[-1]

@@ -1,8 +1,7 @@
 '''
-cd D:\code\Projects\DDSP-SVC
 cd /data/cxp/toys/DDSP-SVC/
+cd D:\code\Projects\DDSP-SVC
 nvidia-smi
-conda activate ddsp
 $python = "D:/Software/SVC-Fusion/project/.conda/python.exe"
 $model = "exp/megumin_mix_tune/model_84000.pt"
 $indir = "D:/Document/VoiceData"
@@ -11,6 +10,7 @@ $outdir = "D:/Document/VoiceInferred"
 python main_reflow.py -m exp/megumin_mix_tune/model_84000.pt -i "data/Take Me Hand"
 python main_reflow.py -m exp/megumin_mix_tune/model_84000.pt -i data/infer/稻香_鸾明.wav -o data/infer/output_稻香_鸾明.wav
 screen -S ddsp_infer python main_reflow.py -m exp/megumin_chat/step_70000.pt -i data/infer -k 4
+conda activate ddsp
 
 
 scp -r cxp@172.17.174.251:/data/cxp/toys/DDSP-SVC/data/infer_out/ D:\code\Projects\DDSP-SVC\exp
@@ -21,6 +21,7 @@ New-Item -Path "D:\Code\projects\ddsp6.2\pretrain\rmvpe\model.pt" -ItemType Hard
 '''
 
 import os
+import re
 import torch
 import librosa
 import argparse
@@ -198,6 +199,17 @@ def cross_fade(a: np.ndarray, b: np.ndarray, idx: int):
   return result
 
 
+
+step_patten = re.compile('(?<=model_)\d+')  # model_180000.pt
+def get_k_steps(ckpt):
+  # ckpt = ckpt.removeprefix('model_').removesuffix('.pt')
+  ckpt = cmd.model_ckpt.split('/')[-1]  # exp/megumin/model_228000.pt
+  m = step_patten.search(ckpt)
+  assert m is not None
+  s = int(m.group(0)) // 1000
+  return s
+
+
 @torch.no_grad()
 def infer_file(model, vocoder, ucoder, args, cmd, device, in_file:Path, out_file:Path|None=None):
   # load input
@@ -322,15 +334,13 @@ def infer_file(model, vocoder, ucoder, args, cmd, device, in_file:Path, out_file
     current_length = current_length + silent_length + len(seg_output)
   if out_file is None:
     *_, name, ckpt = cmd.model_ckpt.split('/')  # exp/megumin/model_228000.pt
-    ckpt = ckpt.split('_')[1]
-    out_file = in_file.parent / f'{in_file.stem}_{name}{ckpt[:3]}_{cmd.key}k_{cmd.vocal_register_shift_key}v{in_file.suffix}'
+    out_file = in_file.parent / f'{in_file.stem}_{name}{get_k_steps(ckpt)}_{cmd.key}k_{cmd.vocal_register_shift_key}v{in_file.suffix}'
   sf.write(out_file, result, args.data.sampling_rate)
 
 
 if __name__ == '__main__':
   # parse commands
   cmd = parse_args()
-
   #device = 'cpu'
   device = cmd.device
   if device is None:
@@ -358,6 +368,5 @@ if __name__ == '__main__':
     if outfile is not None and outfile.suffix[1:].upper() not in sf.available_formats():
       outfile.mkdir(parents=True, exist_ok=True)
       *_, name, ckpt = cmd.model_ckpt.split('/')  # exp/megumin/model_228000.pt
-      ckpt = ckpt.split('_')[1]
-      f_o = outfile / f'{f.stem}_{name}{ckpt[:3]}_{cmd.key}k_{cmd.vocal_register_shift_key}v{f.suffix}'
+      f_o = outfile / f'{f.stem}_{name}{get_k_steps(ckpt)}_{cmd.key}k_{cmd.vocal_register_shift_key}v{f.suffix}'
     infer_file(model, vocoder, ucoder, args, cmd, device, f, f_o)

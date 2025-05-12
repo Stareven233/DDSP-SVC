@@ -1,9 +1,12 @@
 '''
 cd /data/cxp/toys/DDSP-SVC/
-conda activate ddsp
 nvidia-smi
 pkill -u cxp -f python
 python fuck_preprocess.py
+
+cd D:\code\Projects\DDSP-SVC
+conda activate ddsp
+python preprocess.py -c configs/reflow_megumin.yaml -d cuda:0
 '''
 
 import os
