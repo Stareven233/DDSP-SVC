@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 from . import utils
 from torch.utils.tensorboard import SummaryWriter
 
-class Saver(object):
+class Saver:
     def __init__(
             self, 
             args,
@@ -39,6 +39,7 @@ class Saver(object):
 
         # writer
         self.writer = SummaryWriter(os.path.join(self.expdir, 'logs'))
+        self.gt_logged_set = set()
         
         # save config
         path_config = os.path.join(self.expdir, 'config.yaml')

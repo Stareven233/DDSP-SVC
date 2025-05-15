@@ -2,7 +2,7 @@ import os
 import random
 import re
 import numpy as np
-import librosa
+import re
 import torch
 import random
 from tqdm import tqdm
@@ -61,7 +61,7 @@ def traverse_dir(
     return file_list
 
 
-def get_data_loaders(args, whole_audio=False):
+def get_data_loaders(args, whole_audio=False, selected_audio_pattern=None):
     data_train = AudioDataset(
         args.data.train_path,
         waveform_sec=args.data.duration,
@@ -73,7 +73,8 @@ def get_data_loaders(args, whole_audio=False):
         n_spk=args.model.n_spk,
         device=args.train.cache_device,
         fp16=args.train.cache_fp16,
-        use_aug=True)
+        use_aug=True,
+        selected_audio_pattern=selected_audio_pattern)
     loader_train = torch.utils.data.DataLoader(
         data_train ,
         batch_size=args.train.batch_size if not whole_audio else 1,
@@ -115,20 +116,33 @@ class AudioDataset(Dataset):
         device='cpu',
         fp16=False,
         use_aug=False,
+        selected_audio_pattern=None,
     ):
         super().__init__()
-        
         self.sample_rate = sample_rate
         self.hop_size = hop_size
         self.crop_len = int(waveform_sec * sample_rate / hop_size)
         self.path_root = path_root
-        self.paths = traverse_dir(
+
+        paths = traverse_dir(
             os.path.join(path_root, 'audio'),
             extensions=extensions,
             is_pure=True,
             is_sort=True,
             is_ext=True
-        )
+        )  # ['101匹目の羊 -めぐみん Ver.- - 高橋李依_vocals_noreverb_0000.wav', '101匹目の羊 -めぐみん Ver.- - 高橋李依_vocals_noreverb_0001.wav', ]  | ['1\\Mo_girl004_amazed01_058_0000.wav', '1\\Mo_girl004_amazed02_065_0000.wav', ]
+        if selected_audio_pattern is None:
+            self.paths = paths
+        else:
+            self.paths = []
+            patterns = tuple(re.compile(r) for r in selected_audio_pattern)
+            print(f'filtering with {len(patterns)} regexp...')
+            for p in paths:
+                if any(r.search(p) for r in patterns):
+                    self.paths.append(p)
+            print(f'{len(self.paths)} samples are used...')
+        del paths
+
         self.whole_audio = whole_audio
         self.use_aug = use_aug
         self.data_buffer={}
@@ -137,7 +151,7 @@ class AudioDataset(Dataset):
             print('Load all the data from :', path_root)
         else:
             print('Load the f0, volume data from :', path_root)
-        for name_ext in tqdm(self.paths, total=len(self.paths)):
+        for name_ext in tqdm(self.paths):
             name = os.path.splitext(name_ext)[0]
             
             path_f0 = os.path.join(self.path_root, 'f0', name_ext) + '.npy'
@@ -222,7 +236,7 @@ class AudioDataset(Dataset):
         name = os.path.splitext(name_ext)[0]
         start_frame = 0 if self.whole_audio else random.randint(0, data_buffer['frame_len'] - self.crop_len)
         units_frame_len = data_buffer['frame_len'] if self.whole_audio else self.crop_len
-        aug_flag = random.choice([True, False]) and self.use_aug
+        aug_flag = self.use_aug and random.random() > 0.5
 
         # load mel
         mel_key = 'aug_mel' if aug_flag else 'mel'

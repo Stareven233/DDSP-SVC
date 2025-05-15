@@ -10,9 +10,6 @@ from torch.cuda.amp import GradScaler
 from nsf_hifigan.nvSTFT import STFT
 
 
-is_gt_logged = False
-
-
 def calculate_mel_snr(gt_mel, pred_mel):
     # 计算误差图像
     error_image = gt_mel - pred_mel
@@ -51,7 +48,7 @@ def calculate_mel_psnr(gt_mel, pred_mel):
     psnr = 10 * torch.log10(max_power / mse)
     return psnr
 
-def test(args, model, vocoder, loader_test, saver):
+def test(args, model, vocoder, loader_test, saver: Saver):
     print(' [*] testing...')
     model.eval()
 
@@ -122,20 +119,17 @@ def test(args, model, vocoder, loader_test, saver):
             test_ddsp_loss += ddsp_loss.item()
             test_reflow_loss += reflow_loss.item()
             
+            # log audio
+            name = data['name_ext'][0]
+            path_audio = os.path.join(args.data.valid_path, 'audio', name)
+            audio, sr = librosa.load(path_audio, sr=args.data.sampling_rate)
+            if name in saver.gt_logged_set:
+                saver.log_audio({fn+'/pred.wav': signal})
+            else:
+                saver.log_audio({fn+'/gt.wav': audio, fn+'/pred.wav': signal})
+
             # log mel
             saver.log_spec(data['name'][0], data['mel'], mel)
-            
-            # log audio
-            if not is_gt_logged:
-                path_audio = os.path.join(args.data.valid_path, 'audio', data['name_ext'][0])
-                audio, sr = librosa.load(path_audio, sr=args.data.sampling_rate)
-                if len(audio.shape) > 1:
-                    audio = librosa.to_mono(audio)
-                audio = torch.from_numpy(audio).unsqueeze(0).to(signal)
-                saver.log_audio({fn+'/gt.wav': audio, fn+'/pred.wav': signal})
-            else:
-                saver.log_audio({fn+'/pred.wav': signal})
-
             WAV2MEL = STFT(
                         sr=args.data.sampling_rate,
                         n_mels=128,
@@ -145,14 +139,17 @@ def test(args, model, vocoder, loader_test, saver):
                         fmin=40,
                         fmax=22050,
                         clip_val=1e-5)
-            audio = audio.unsqueeze(0)
             pre_mel = WAV2MEL.get_mel(signal[0, ...])
             pre_mel = pre_mel.transpose(-1, -2)
-            gt_mel = WAV2MEL.get_mel(audio[0, ...])
+            if len(audio.shape) > 1:
+                audio = librosa.to_mono(audio)
+            audio = torch.from_numpy(audio).unsqueeze(0).to(signal)
+            gt_mel = WAV2MEL.get_mel(audio)
             gt_mel = gt_mel.transpose(-1, -2)
             # 如果形状不同,裁剪使得形状相同
             if pre_mel.shape[1] != gt_mel.shape[1]:
                 gt_mel = gt_mel[:, :pre_mel.shape[1], :]
+            saver.gt_logged_set.add(name)
             saver.log_spec(data['name'][0], gt_mel, pre_mel)
 
             # 计算指标
@@ -291,7 +288,7 @@ def train(args, initial_global_step, model, optimizer, scheduler, vocoder, loade
                 # save latest
                 saver.global_step>0 and saver.save_model(model, optimizer_save, postfix=f'{saver.global_step}')
                 last_val_step = saver.global_step - args.train.interval_val
-                if last_val_step % args.train.interval_force_save != 0:
+                if last_val_step % args.train.interval_force_save > 1:
                     saver.delete_model(postfix=f'{last_val_step}')
                 
                 # run testing set

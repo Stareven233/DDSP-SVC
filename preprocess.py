@@ -1,4 +1,9 @@
 '''
+cd D:\Code\projects\DDSP-SVC
+$python="D:\Software\SVC-Fusion\project\.conda\python.exe"
+& $python preprocess.py -c configs/reflow_megumin.yaml
+& $python preprocess.py -c configs/reflow_fritia.yaml
+
 cd /data/cxp/toys/DDSP-SVC/
 conda activate ddsp
 nvidia-smi
@@ -6,6 +11,7 @@ python preprocess.py -c configs/reflow.yaml -s train_5_16
 '''
 
 import os
+from pathlib import Path
 import numpy as np
 import random
 import librosa
@@ -27,30 +33,31 @@ def parse_args(args=None, namespace=None):
   """Parse command-line arguments."""
   parser = argparse.ArgumentParser()
   parser.add_argument("-c", "--config", type=str, required=True, help="path to the config file")
-  parser.add_argument("-d", "--device", type=str, default=None, required=False, help="cpu or cuda, auto if not set")
+  parser.add_argument("-d", "--device", type=str, default='cuda:0', required=False, help="cpu or cuda, auto if not set")
   parser.add_argument("-s", "--split", type=str, default=None, required=False, help="train/val_1_8: 训练或验证集数据，划分八份，预处理第一份")
   return parser.parse_args(args=args, namespace=namespace)
 
 
 def preprocess(path, f0_extractor, volume_extractor, mel_extractor, units_encoder, sample_rate, hop_size, device='cuda', use_pitch_aug=False, extensions=['wav'], frange=None):
-  path_srcdir = os.path.join(path, 'audio')
-  path_unitsdir = os.path.join(path, 'units')
-  path_f0dir = os.path.join(path, 'f0')
-  path_volumedir = os.path.join(path, 'volume')
-  path_augvoldir = os.path.join(path, 'aug_vol')
-  path_meldir = os.path.join(path, 'mel')
-  path_augmeldir = os.path.join(path, 'aug_mel')
-  path_skipdir = os.path.join(path, 'skip')
-  os.makedirs(path_unitsdir, exist_ok=True)
-  os.makedirs(path_f0dir, exist_ok=True)
-  os.makedirs(path_volumedir, exist_ok=True)
-  os.makedirs(path_meldir, exist_ok=True)
-  os.makedirs(path_augmeldir, exist_ok=True)
-  os.makedirs(path_augvoldir, exist_ok=True)
-  os.makedirs(path_skipdir, exist_ok=True)
+  path_srcdir = Path(path, 'audio')
+  path_unitsdir = Path(path, 'units')
+  path_f0dir = Path(path, 'f0')
+  path_volumedir = Path(path, 'volume')
+  path_augvoldir = Path(path, 'aug_vol')
+  path_meldir = Path(path, 'mel')
+  path_augmeldir = Path(path, 'aug_mel')
+  path_skipdir = Path(path, 'skip')
+  data_dirs = (path_unitsdir, path_f0dir, path_volumedir, path_meldir, path_augmeldir, path_augvoldir, path_skipdir)
+  tuple(d.mkdir(exist_ok=True) for d in data_dirs)
+  sub_item = next(path_srcdir.iterdir())
+  if sub_item.is_dir():
+    n_spk = len(tuple(path_srcdir.iterdir()))
+    for i in range(1, n_spk+1):
+      for d in data_dirs:
+        (d / str(i)).mkdir(parents=True, exist_ok=True)
 
   # list files
-  filelist = utils.traverse_dir(path_srcdir, extensions=extensions, is_pure=True, is_sort=True, is_ext=True)
+  filelist = utils.traverse_dir(path_srcdir.as_posix(), extensions=extensions, is_pure=True, is_sort=True, is_ext=True)
   if frange is not None:
     i, n = tuple(map(int, frange))
     i = min(n, max(1, i))
@@ -63,14 +70,14 @@ def preprocess(path, f0_extractor, volume_extractor, mel_extractor, units_encode
   # run
   def process(file):
     binfile = file + '.npy'
-    path_srcfile = os.path.join(path_srcdir, file)
-    path_unitsfile = os.path.join(path_unitsdir, binfile)
-    path_f0file = os.path.join(path_f0dir, binfile)
-    path_volumefile = os.path.join(path_volumedir, binfile)
-    path_augvolfile = os.path.join(path_augvoldir, binfile)
-    path_melfile = os.path.join(path_meldir, binfile)
-    path_augmelfile = os.path.join(path_augmeldir, binfile)
-    path_skipfile = os.path.join(path_skipdir, file)
+    path_srcfile = path_srcdir / file
+    path_unitsfile = path_unitsdir / binfile
+    path_f0file = path_f0dir / binfile
+    path_volumefile = path_volumedir / binfile
+    path_augvolfile = path_augvoldir / binfile
+    path_melfile = path_meldir / binfile
+    path_augmelfile = path_augmeldir / binfile
+    path_skipfile = path_skipdir / file
 
     # load audio
     audio, _ = librosa.load(path_srcfile, sr=sample_rate)
@@ -120,11 +127,11 @@ def preprocess(path, f0_extractor, volume_extractor, mel_extractor, units_encode
         np.save(path_augmelfile, aug_mel)
         np.save(path_augvolfile, aug_vol)
     else:
-      print('\n[Error] F0 extraction failed: ' + path_srcfile)
+      print(f'\n[Error] F0 extraction failed: {path_srcfile}')
       shutil.move(path_srcfile, path_skipdir)
-      print('This file has been moved to ' + path_skipfile)
+      print(f'This file has been moved to {path_skipfile}')
 
-  print('Preprocess the audio clips in :', path_srcdir)
+  print(f'Preprocess the audio clips in : {path_srcdir}')
   # single process
   for file in tqdm(filelist):
     process(file)

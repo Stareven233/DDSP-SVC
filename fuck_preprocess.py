@@ -7,6 +7,10 @@ python fuck_preprocess.py
 cd D:\code\Projects\DDSP-SVC
 conda activate ddsp
 python preprocess.py -c configs/reflow_megumin.yaml -d cuda:0
+
+cd D:\Code\projects\DDSP-SVC
+$python="D:\Software\SVC-Fusion\project\.conda\python.exe"
+& $python preprocess.py -c configs/reflow_megumin.yaml -d cuda:0
 '''
 
 import os

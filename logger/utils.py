@@ -114,6 +114,8 @@ def load_model(
             path_pt = path+str(maxstep)+'.pt'
         else:
             path_pt = path+'best.pt'
+        if not os.path.exists(path_pt):
+            return global_step, model, optimizer
         print(' [*] restoring model from', path_pt)
         ckpt = torch.load(path_pt, map_location=torch.device(device))
         global_step = ckpt['global_step']
