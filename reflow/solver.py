@@ -127,6 +127,7 @@ def test(args, model, vocoder, loader_test, saver: Saver):
                 saver.log_audio({fn+'/pred.wav': signal})
             else:
                 saver.log_audio({fn+'/gt.wav': audio, fn+'/pred.wav': signal})
+                saver.gt_logged_set.add(name)
 
             # log mel
             saver.log_spec(data['name'][0], data['mel'], mel)
@@ -149,7 +150,6 @@ def test(args, model, vocoder, loader_test, saver: Saver):
             # 如果形状不同,裁剪使得形状相同
             if pre_mel.shape[1] != gt_mel.shape[1]:
                 gt_mel = gt_mel[:, :pre_mel.shape[1], :]
-            saver.gt_logged_set.add(name)
             saver.log_spec(data['name'][0], gt_mel, pre_mel)
 
             # 计算指标
@@ -194,9 +194,7 @@ def test(args, model, vocoder, loader_test, saver: Saver):
     return test_ddsp_loss, test_reflow_loss
 
 
-def train(args, initial_global_step, model, optimizer, scheduler, vocoder, loader_train, loader_test):
-    # saver
-    saver = Saver(args, initial_global_step=initial_global_step)
+def train(args, saver, model, optimizer, scheduler, vocoder, loader_train, loader_test):
 
     # model size
     params_count = utils.get_network_paras_amount({'model': model})
@@ -205,7 +203,7 @@ def train(args, initial_global_step, model, optimizer, scheduler, vocoder, loade
     
     # run
     num_batches = len(loader_train)
-    start_epoch = initial_global_step // num_batches
+    start_epoch = saver.global_step // num_batches
     model.train()
     saver.log_info('======= start training =======')
     scaler = GradScaler()

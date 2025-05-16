@@ -5,15 +5,25 @@ from shutil import copyfile
 from remove_short_audios import check_duration
 
 
-src = Path(r'D:\documents\!audio\kazuma')
-dest = Path(r'D:\documents\!audio\t')
-i = 0b0
-for f in tqdm(src.iterdir()):
-  i ^= 0b1
-  if i == 0b1:
+src = Path(r'D:\Code\projects\DDSP-SVC\data\kazuma\train\audio')
+dest = Path(r'D:\Code\projects\DDSP-SVC\data\kazuma\val\audio')
+# val_targets = (
+#   'Kazuma_2021_Story_12gatsu_3_08_0001.wav',
+#   'Kazuma_Main3_9_4_9_0001.wav',
+# )
+# for v in tqdm(val_targets):
+#   f = src / v
+#   if not f.exists():
+#     print(f, 'not found')
+#     continue
+#   f.rename(dest / v)
+
+dest = Path(r'D:\Code\projects\DDSP-SVC\data\kazuma\train_more')
+for i, f in tqdm(enumerate(src.iterdir())):
+  if i % 5 != 0 or f.stem.startswith('ちいさな冒険者'):
     continue
-  f.unlink()
-  # f.rename(dest / f.name)
+  # f.unlink()
+  f.rename(dest / f.name)
 exit()
 
 # src = Path(r'D:/documents/!audio/konofan-audio/Voice/Story')

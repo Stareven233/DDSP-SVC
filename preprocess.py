@@ -1,6 +1,7 @@
 '''
 cd D:\Code\projects\DDSP-SVC
 $python="D:\Software\SVC-Fusion\project\.conda\python.exe"
+& $python preprocess.py -c configs/reflow_kazuma.yaml
 & $python preprocess.py -c configs/reflow_megumin.yaml
 & $python preprocess.py -c configs/reflow_fritia.yaml
 

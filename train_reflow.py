@@ -1,6 +1,7 @@
 '''
 cd D:\Code\projects\DDSP-SVC
 $python="D:\Software\SVC-Fusion\project\.conda\python.exe"
+& $python train_reflow.py -c configs/reflow_kazuma.yaml
 & $python train_reflow.py -c configs/reflow_megumin.yaml
 & $python train_reflow.py -c configs/reflow_fritia.yaml
 
@@ -23,6 +24,7 @@ from optimizer.muon import Muon_AdamW
 from logger import utils
 from reflow.data_loaders import get_data_loaders
 from reflow.vocoder import Vocoder, Unit2Wav
+from logger.saver import Saver
 
 
 def parse_args(args=None, namespace=None):
@@ -79,29 +81,30 @@ if __name__ == '__main__':
     optimizer = Muon_AdamW(model, 
                     muon_args={'weight_decay': args.train.weight_decay}, 
                     adamw_args={'weight_decay': 0})
-    initial_global_step, model, optimizer = utils.load_model(args.env.expdir, model, optimizer, device=args.device)
-    if initial_global_step == 0 and args.env.expdir_base is not None:
+    global_step, model, optimizer = utils.load_model(args.env.expdir, model, optimizer, device=args.device)
+    if global_step == 0 and args.env.expdir_base is not None:
         # 尝试加载底模
-        initial_global_step, model, optimizer = utils.load_model(args.env.expdir_base, model, optimizer, device=args.device)
+        global_step, model, optimizer = utils.load_model(args.env.expdir_base, model, optimizer, device=args.device)
     for param_group in optimizer.param_groups:
         param_group['initial_lr'] = args.train.lr
-        param_group['lr'] = args.train.lr * args.train.gamma ** max((initial_global_step - 2) // args.train.decay_step, 0)
-    # scheduler = lr_scheduler.StepLR(optimizer, step_size=args.train.decay_step, gamma=args.train.gamma, last_epoch=initial_global_step-2)
-    scheduler = lr_scheduler.linear_warmup_decay(optimizer, 500, args.train.decay_step, args.train.gamma, last_epoch=initial_global_step-2)
+        param_group['lr'] = args.train.lr * args.train.gamma ** max((global_step - 2) // args.train.decay_step, 0)
 
+    # scheduler = lr_scheduler.StepLR(optimizer, step_size=args.train.decay_step, gamma=args.train.gamma, last_epoch=global_step-2)
+    scheduler = lr_scheduler.linear_warmup_decay(optimizer, 500, args.train.decay_step, args.train.gamma, last_epoch=global_step-2)
     # datas
     loader_train, loader_valid = get_data_loaders(args, whole_audio=False, selected_audio_pattern=args.data.selected_audio_pattern)
     exp_name = args.env.expdir.split('/')[-1]
+    # saver
+    saver = Saver(args, initial_global_step=global_step)
     
     def melt_save():
         print('\n检测到 Ctrl+C，正在退出程序...')
-        from logger.saver import Saver
         op = optimizer if args.train.save_opt else None
-        Saver(args, initial_global_step=initial_global_step).save_model(model, op, postfix=f'melt')
+        saver.save_model(model, op, postfix=f'melt')
         print('已保存当前的模型权重及优化器状态...')
     try:
         print(f'{exp_name} 开始训练！')
-        train(args, initial_global_step, model, optimizer, scheduler, vocoder, loader_train, loader_valid)
+        train(args, saver, model, optimizer, scheduler, vocoder, loader_train, loader_valid)
         print('结束训练！')
     except KeyboardInterrupt:
         melt_save()

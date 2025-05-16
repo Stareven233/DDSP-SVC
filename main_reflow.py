@@ -2,11 +2,11 @@
 cd D:\code\Projects\DDSP-SVC
 nvidia-smi
 $python = "D:/Software/SVC-Fusion/project/.conda/python.exe"
-$model = "exp/kazuma/model_100000.pt"
-$model = "exp/megumin/model_228000.pt"
+$model = "exp/megumin/model_16000.pt"
 $model = "exp/fritia/model_12020.pt"
-$indir = "D:/Document/Audio/Мой мармеладный"
-$filename = "Мой мармеладный Speed Up _vocals_Instrumental_aug1"
+$model = "exp/kazuma/model_11600.pt"
+$indir = "D:/Document/Audio/红装"
+$filename = "红装 Hi-res_vocals_noreverb#良"
 $key=0
 $shift_key=0
 & $python main_reflow.py -m $model -i "$indir/$filename.flac" -k $key -v $shift_key
