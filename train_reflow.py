@@ -1,9 +1,9 @@
 '''
 cd D:\Code\projects\DDSP-SVC
 $python="D:\Software\SVC-Fusion\project\.conda\python.exe"
-& $python train_reflow.py -c configs/reflow_kazuma.yaml
-& $python train_reflow.py -c configs/reflow_megumin.yaml
 & $python train_reflow.py -c configs/reflow_fritia.yaml
+& $python train_reflow.py -c configs/reflow_megumin.yaml
+& $python train_reflow.py -c configs/reflow_kazuma.yaml
 
 & $python train_reflow.py -c configs/reflow_annealing.yaml
 
@@ -16,9 +16,12 @@ tensorboard --logdir D:/Code/projects/DDSP-SVC/exp
 import os
 import argparse
 import traceback
+from pathlib import Path
 
 import torch
 # from torch.optim import lr_scheduler
+from omegaconf import OmegaConf
+
 from optimizer import lr_scheduler
 from optimizer.muon import Muon_AdamW
 from logger import utils
@@ -44,8 +47,12 @@ if __name__ == '__main__':
     cmd = parse_args()
     
     # load config
-    args = utils.load_config(cmd.config)
     print(' > config:', cmd.config)
+    args = OmegaConf.load(cmd.config)
+    if args.env.resume_path and (resume_path := Path(args.env.resume_path)).is_file():
+        resume_config = resume_path.with_suffix('.yaml')
+        args = OmegaConf.merge(OmegaConf.load(resume_config), args)
+    args = utils.DotDict(OmegaConf.to_container(args))
     print(' >    exp:', args.env.expdir)
     
     # load vocoder
@@ -55,19 +62,20 @@ if __name__ == '__main__':
     if args.model.type == 'RectifiedFlow':
         from reflow.solver import train
         model = Unit2Wav(
-                    args.data.sampling_rate,
-                    args.data.block_size,
-                    args.model.win_length,
-                    args.data.encoder_out_channels, 
-                    args.model.n_spk,
-                    args.model.use_norm,
-                    args.model.use_attention,
-                    args.model.use_pitch_aug,
-                    vocoder.dimension,
-                    args.model.n_aux_layers,
-                    args.model.n_aux_chans,
-                    args.model.n_layers,
-                    args.model.n_chans) 
+            args.data.sampling_rate,
+            args.data.block_size,
+            args.model.win_length,
+            args.data.encoder_out_channels, 
+            args.model.n_spk,
+            args.model.use_norm,
+            args.model.use_attention,
+            args.model.use_pitch_aug,
+            vocoder.dimension,
+            args.model.n_aux_layers,
+            args.model.n_aux_chans,
+            args.model.n_layers,
+            args.model.n_chans
+        )
                     
     else:
         raise ValueError(f" [x] Unknown Model: {args.model.type}")
@@ -78,19 +86,17 @@ if __name__ == '__main__':
     model.to(args.device)
     
     # load parameters
-    optimizer = Muon_AdamW(model, 
-                    muon_args={'weight_decay': args.train.weight_decay}, 
-                    adamw_args={'weight_decay': 0})
+    optimizer = Muon_AdamW(model, muon_args={'weight_decay': args.train.weight_decay}, adamw_args={'weight_decay': 0})
     global_step, model, optimizer = utils.load_model(args.env.expdir, model, optimizer, device=args.device)
-    if global_step == 0 and args.env.expdir_base is not None:
+    if global_step == 0 and args.env.resume_path is not None:
         # 尝试加载底模
-        global_step, model, optimizer = utils.load_model(args.env.expdir_base, model, optimizer, device=args.device)
+        global_step, model, optimizer = utils.load_model(args.env.resume_path, model, optimizer, device=args.device)
     for param_group in optimizer.param_groups:
         param_group['initial_lr'] = args.train.lr
-        param_group['lr'] = args.train.lr * args.train.gamma ** max((global_step - 2) // args.train.decay_step, 0)
+        param_group['lr'] = args.train.lr * args.train.gamma ** max((global_step-2) // args.train.decay_step, 0)
 
     # scheduler = lr_scheduler.StepLR(optimizer, step_size=args.train.decay_step, gamma=args.train.gamma, last_epoch=global_step-2)
-    scheduler = lr_scheduler.linear_warmup_decay(optimizer, 500, args.train.decay_step, args.train.gamma, last_epoch=global_step-2)
+    scheduler = lr_scheduler.linear_warmup_decay(optimizer, 200, args.train.decay_step, args.train.gamma, last_steps=global_step-2)
     # datas
     loader_train, loader_valid = get_data_loaders(args, whole_audio=False, selected_audio_pattern=args.data.selected_audio_pattern)
     exp_name = args.env.expdir.split('/')[-1]
@@ -107,9 +113,10 @@ if __name__ == '__main__':
         train(args, saver, model, optimizer, scheduler, vocoder, loader_train, loader_valid)
         print('结束训练！')
     except KeyboardInterrupt:
-        melt_save()
+        print('中断训练！')
     except Exception:
-        melt_save()
         err_log = f'error_{exp_name}.log'
         traceback.print_exc(file=open(err_log, 'w', encoding='utf-8'))
         raise
+    finally:
+        melt_save()

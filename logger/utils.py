@@ -74,8 +74,8 @@ def load_config(path_config):
     return args
 
 
-def to_json(path_params, path_json):
-    params = torch.load(path_params, map_location=torch.device('cpu'))
+def to_json(params, path_json):
+    # params = torch.load(path_params, map_location=torch.device('cpu'))
     raw_state_dict = {}
     for k, v in params.items():
         val = v.flatten().numpy().tolist()
@@ -95,13 +95,19 @@ def convert_tensor_to_numpy(tensor, is_squeeze=True):
     return tensor.numpy()
 
            
-def load_model(
-        expdir, 
-        model,
-        optimizer,
-        name='model',
-        postfix='',
-        device='cpu'):
+def load_model(expdir, model, optimizer, name='model', postfix='', device='cpu'):
+    def _load(path):
+        print(' [*] restoring model from', path)
+        ckpt = torch.load(path, map_location=torch.device(device))
+        model.load_state_dict(ckpt['model'], strict=False)
+        if ckpt.get('optimizer') != None:
+            optimizer.load_state_dict(ckpt['optimizer'])
+        return ckpt['global_step']
+
+    if os.path.isfile(expdir) and expdir.endswith('.pt'):
+        _load(expdir)
+        return 0, model, optimizer
+
     if postfix == '':
         postfix = '_' + postfix
     path = os.path.join(expdir, name+postfix)
@@ -116,10 +122,5 @@ def load_model(
             path_pt = path+'best.pt'
         if not os.path.exists(path_pt):
             return global_step, model, optimizer
-        print(' [*] restoring model from', path_pt)
-        ckpt = torch.load(path_pt, map_location=torch.device(device))
-        global_step = ckpt['global_step']
-        model.load_state_dict(ckpt['model'], strict=False)
-        if ckpt.get('optimizer') != None:
-            optimizer.load_state_dict(ckpt['optimizer'])
+        global_step = _load(path_pt)
     return global_step, model, optimizer

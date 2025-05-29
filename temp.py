@@ -3,10 +3,24 @@ from pathlib import Path
 from tqdm import tqdm
 from shutil import copyfile
 from remove_short_audios import check_duration
+import re
 
 
-src = Path(r'D:\Code\projects\DDSP-SVC\data\kazuma\train\audio')
-dest = Path(r'D:\Code\projects\DDSP-SVC\data\kazuma\val\audio')
+src = Path(r'D:\Code\projects\DDSP-SVC\data\fritia\train\audio\1')
+dest = Path(r'D:\Code\projects\DDSP-SVC\data\fritia\train\audio\1-temp')
+selected_audio_pattern = (
+  '尘白禁区芙提雅-驰掣角色PV极致OK的发布会',
+  'Vo_[0-9a-z]+_(?:main|item|skill|action|level|function|win)',
+  'Vo_ch11act',
+)
+
+patterns = tuple(re.compile(r) for r in selected_audio_pattern)
+print(f'filtering with {len(patterns)} regexp...')
+for p in tqdm(src.iterdir()):
+    if any(r.search(p.stem) for r in patterns):
+      continue
+    p.rename(dest / p.name)
+exit()
 # val_targets = (
 #   'Kazuma_2021_Story_12gatsu_3_08_0001.wav',
 #   'Kazuma_Main3_9_4_9_0001.wav',

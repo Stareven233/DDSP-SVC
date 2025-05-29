@@ -2,16 +2,20 @@
 cd D:\code\Projects\DDSP-SVC
 nvidia-smi
 $python = "D:/Software/SVC-Fusion/project/.conda/python.exe"
-$model = "exp/megumin/model_16000.pt"
-$model = "exp/fritia/model_12020.pt"
 $model = "exp/kazuma/model_11600.pt"
-$indir = "D:/Document/Audio/红装"
-$filename = "红装 Hi-res_vocals_noreverb#良"
+$model = "exp/megumin/model_9200.pt"
+$model = "exp/fritia/model_4500.pt"
+$indir = "D:\Document\Audio\東京テディベア"
+$filename = "東京テディベア Evil歌回_vocals_noreverb"
+$indir = "D:\Document\Audio\快乐的扑满"
+$filename = "快乐的扑满 HIFI  邵丽棠_vocals_noreverb"
 $key=0
-$shift_key=0
-& $python main_reflow.py -m $model -i "$indir/$filename.flac" -k $key -v $shift_key
-$mix="{1:0.4,2:0.6}"
-& $python main_reflow.py -m $model -i "$indir/$filename.flac" -k $key -v $shift_key -mix $mix
+$vocal_key=0
+$formant_key=0
+& $python main_reflow.py -m $model -i "$indir/$filename.flac" -k $key -f $formant_key -v $vocal_key
+& $python main_reflow.py -m $model -i "$indir" -k $key -f $formant_key  -v $vocal_key
+$mix="{1:0.1,2:0.9}"
+& $python main_reflow.py -m $model -i "$indir/$filename.flac" -k $key -f $formant_key  -v $vocal_key -mix $mix
 
 screen -S ddsp_infer python main_reflow.py -m exp/megumin_chat/step_70000.pt -i data/infer -k 4
 conda activate ddsp
@@ -97,7 +101,7 @@ def parse_args(args=None, namespace=None):
   parser.add_argument(
       "-k",
       "--key",
-      type=str,
+      type=int,
       required=False,
       default=0,
       help="key changed (number of semitones) | default: 0",
@@ -105,7 +109,7 @@ def parse_args(args=None, namespace=None):
   parser.add_argument(
       "-f",
       "--formant_shift_key",
-      type=str,
+      type=int,
       required=False,
       default=0,
       help="formant changed (number of semitones) , only for pitch-augmented model| default: 0",
@@ -113,7 +117,7 @@ def parse_args(args=None, namespace=None):
   parser.add_argument(
       "-v",
       "--vocal_register_shift_key",
-      type=str,
+      type=int,
       required=False,
       default=0,
       help="vocal register changed (number of semitones) , only for pc-type vocoder| default: 0",
@@ -209,7 +213,9 @@ def gen_metadata(args, ckpt):
   m = step_patten.search(ckpt)
   assert m is not None
   s = int(m.group(0)) / 1000
-  s = f'{s}ks_{args.key}k_{args.vocal_register_shift_key}v'
+  s = f'{s}ks_{args.key}k_{args.vocal_register_shift_key}vk'
+  if args.formant_shift_key != 0:
+    s += f'_{args.formant_shift_key}fk'
   mix_dict = args.spk_mix_dict
   if mix_dict and mix_dict != 'None':
     s += f'_{mix_dict.replace(":", "@")}m'
@@ -255,14 +261,14 @@ def infer_file(model, vocoder, ucoder, args, cmd, device, in_file:Path, out_file
   f0 = torch.from_numpy(f0).float().to(device).unsqueeze(-1).unsqueeze(0)
 
   # key change
-  f0 = f0 * 2**(float(cmd.key) / 12)
+  f0 = f0 * 2**(cmd.key / 12)
 
   # formant change
-  formant_shift_key = torch.from_numpy(np.array([[float(cmd.formant_shift_key)]])).float().to(device)
+  formant_shift_key = torch.from_numpy(np.array([[cmd.formant_shift_key]])).float().to(device)
 
   # vocal register change
   if vocoder.vocoder.h.pc_aug:
-    vocal_register_factor = 2**(float(cmd.vocal_register_shift_key) / 12)
+    vocal_register_factor = 2**(cmd.vocal_register_shift_key / 12)
   else:
     print('Vocal register shift is not supported for current vocoder!')
     vocal_register_factor = 1

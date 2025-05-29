@@ -1,9 +1,9 @@
 '''
 cd D:\Code\projects\DDSP-SVC
 $python="D:\Software\SVC-Fusion\project\.conda\python.exe"
+& $python preprocess.py -c configs/reflow_fritia.yaml
 & $python preprocess.py -c configs/reflow_kazuma.yaml
 & $python preprocess.py -c configs/reflow_megumin.yaml
-& $python preprocess.py -c configs/reflow_fritia.yaml
 
 cd /data/cxp/toys/DDSP-SVC/
 conda activate ddsp
@@ -17,6 +17,7 @@ import numpy as np
 import random
 import librosa
 import torch
+from omegaconf import OmegaConf
 # import pyworld as pw
 # import parselmouth
 import argparse
@@ -163,7 +164,11 @@ if __name__ == '__main__':
   print(f'{device=}')
 
   # load config
-  args = utils.load_config(cmd.config)
+  args = OmegaConf.load(cmd.config)
+  if args.env.resume_path and (resume_path := Path(args.env.resume_path)).is_file():
+      resume_config = resume_path.with_suffix('.yaml')
+      args = OmegaConf.merge(OmegaConf.load(resume_config), args)
+  args = utils.DotDict(OmegaConf.to_container(args))
   sample_rate = args.data.sampling_rate
   hop_size = args.data.block_size
 
@@ -183,8 +188,8 @@ if __name__ == '__main__':
   mel_extractor = Vocoder(args.vocoder.type, args.vocoder.ckpt, device=device)
   print('Vocoder initialized')
   if mel_extractor.vocoder_sample_rate != sample_rate or mel_extractor.vocoder_hop_size != hop_size:
+    print(f'Unmatch current/vocoder parameters {sample_rate=}/{mel_extractor.vocoder_sample_rate}, {hop_size=}/{mel_extractor.vocoder_hop_size}, mel extraction is ignored!')
     mel_extractor = None
-    print('Unmatch vocoder parameters, mel extraction is ignored!')
   elif args.model.use_pitch_aug:
     use_pitch_aug = True
 

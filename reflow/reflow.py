@@ -18,6 +18,7 @@ class RectifiedFlow(nn.Module):
         self.spec_max = spec_max
     
     def reflow_loss(self, x_1, t, cond, loss_type='l2_lognorm'):
+        # https://zhuanlan.zhihu.com/p/603740431
         x_0 = torch.randn_like(x_1)
         x_t = x_0 + t[:, None, None, None] * (x_1 - x_0)
         v_pred = self.velocity_fn(x_t, 1000 * t, cond)
@@ -75,6 +76,7 @@ class RectifiedFlow(nn.Module):
                 t = torch.full((b,), 0, device=device)
                 dt = 1.0 / infer_step 
             else:
+                # 推理时condition==gt_spec==ddsp_mel，t_start时间往前的保持gt，后面的维持噪声进行降噪？
                 norm_spec = self.norm_spec(gt_spec)
                 norm_spec = norm_spec.transpose(1, 2)[:, None, :, :] # [B, 1, M, T]
                 x = t_start * norm_spec + (1 - t_start) * torch.randn(shape, device=device)

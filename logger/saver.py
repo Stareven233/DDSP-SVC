@@ -112,9 +112,13 @@ class Saver:
         # path
         if postfix:
             postfix = '_' + postfix
-        path_pt = os.path.join(
-            self.expdir , name+postfix+'.pt')
-       
+        while True:
+            path_pt = os.path.join(self.expdir , name+postfix+'.pt')
+            if not os.path.exists(path_pt):
+                break
+            print(f'warn: {path_pt=} exist! skiping...')
+            postfix += '+'
+
         # check
         print(' [*] model checkpoint saved: {}'.format(path_pt))
 
@@ -131,9 +135,8 @@ class Saver:
             
         # to json
         if to_json:
-            path_json = os.path.join(
-                self.expdir , name+'.json')
-            utils.to_json(path_params, path_json)
+            path_json = os.path.join(self.expdir , name+'.json')
+            utils.to_json(model.state_dict(), path_json)
     
     def delete_model(self, name='model', postfix=''):
         # path
