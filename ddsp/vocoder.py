@@ -145,6 +145,7 @@ class F0_Extractor:
 
 
 class Volume_Extractor:
+    # 提取音量包络信息，用于保持原始音频的动态特性
     def __init__(self, hop_size = 512, win_size = 2048):
         self.hop_size = hop_size
         self.win_size = win_size
@@ -160,6 +161,7 @@ class Volume_Extractor:
     
          
 class Units_Encoder:
+    # 提取提取内容特征（语言学内容），同时去除说话人特征
     def __init__(self, encoder, encoder_ckpt, encoder_sample_rate = 16000, encoder_hop_size = 320, device = None,
                  cnhubertsoft_gate=10):
         if device is None:

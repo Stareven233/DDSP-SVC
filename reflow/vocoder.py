@@ -200,7 +200,7 @@ class Unit2Wav(nn.Module):
             ddsp_mel = None
             
         if not infer:
-            ddsp_loss = F.mse_loss(ddsp_mel, gt_spec)
+            ddsp_loss = F.mse_loss(ddsp_mel, gt_spec) + F.mse_loss(torch.log(ddsp_mel), torch.log(gt_spec))
             if t_start < 1.0:
                 reflow_loss = self.reflow_model(ddsp_mel, gt_spec=gt_spec, t_start=t_start, infer=False)
             else:

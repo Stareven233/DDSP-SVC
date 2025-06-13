@@ -1,34 +1,34 @@
 '''
-cd D:\code\Projects\DDSP-SVC
+cd D:/code/Projects/DDSP-SVC
 nvidia-smi
 $python = "D:/Software/SVC-Fusion/project/.conda/python.exe"
+
 $model = "exp/kazuma/model_11600.pt"
-$model = "exp/megumin/model_9200.pt"
 $model = "exp/fritia/model_4500.pt"
-$indir = "D:\Document\Audio\東京テディベア"
-$filename = "東京テディベア Evil歌回_vocals_noreverb"
-$indir = "D:\Document\Audio\快乐的扑满"
-$filename = "快乐的扑满 HIFI  邵丽棠_vocals_noreverb"
+$model = "exp/megumin/model_9200.pt"
+$indir = "D:/Document/Audio/快乐的扑满"
+$indir = "F:/Unbra/Baito/ai-sings/春日影"
+$filename = "春日影_人声.flac"
 $key=0
 $vocal_key=0
 $formant_key=0
+
 & $python main_reflow.py -m $model -i "$indir/$filename.flac" -k $key -f $formant_key -v $vocal_key
 & $python main_reflow.py -m $model -i "$indir" -k $key -f $formant_key  -v $vocal_key
 $mix="{1:0.1,2:0.9}"
 & $python main_reflow.py -m $model -i "$indir/$filename.flac" -k $key -f $formant_key  -v $vocal_key -mix $mix
 
-screen -S ddsp_infer python main_reflow.py -m exp/megumin_chat/step_70000.pt -i data/infer -k 4
-conda activate ddsp
-scp -r cxp@172.17.174.251:/data/cxp/toys/DDSP-SVC/data/infer_out/ D:\code\Projects\DDSP-SVC\exp
-scp -r cxp@172.17.174.251:/data/cxp/toys/DDSP-SVC/exp/megumin_mix_tune/config.yaml D:/code/Projects/DDSP-SVC/exp/megumin_mix_tune
-scp -r cxp@172.17.174.251:/data/cxp/toys/DDSP-SVC/exp/megumin_mix_tune/model_84000.pt D:/code/Projects/DDSP-SVC/exp/megumin_mix_tune
-New-Item -Path "D:\Code\projects\ddsp6.2\pretrain\contentvec\checkpoint_best_legacy_500.pt" -ItemType HardLink -Target "D:\Software\SVC-Fusion\project\pretrain\contentvec\checkpoint_best_legacy_500.pt"
-New-Item -Path "D:\Code\projects\ddsp6.2\pretrain\rmvpe\model.pt" -ItemType HardLink -Target "D:\Software\SVC-Fusion\project\pretrain\rmvpe\model.pt"
+cd F:/CODE/!projects/DDSP-SVC
+uv run python main_reflow.py -m $model -i "$indir/$filename" -k $key -f $formant_key -v $vocal_key
+New-Item -Path "D:/Code/projects/ddsp6.2/pretrain/contentvec/checkpoint_best_legacy_500.pt" -ItemType HardLink -Target "D:/Software/SVC-Fusion/project/pretrain/contentvec/checkpoint_best_legacy_500.pt"
+New-Item -Path "D:/Code/projects/ddsp6.2/pretrain/rmvpe/model.pt" -ItemType HardLink -Target "D:/Software/SVC-Fusion/project/pretrain/rmvpe/model.pt"
 '''
 
 import os
 import re
 import torch
+import fairseq
+torch.serialization.add_safe_globals([fairseq.data.dictionary.Dictionary])
 import librosa
 import argparse
 import numpy as np
@@ -346,7 +346,7 @@ def infer_file(model, vocoder, ucoder, args, cmd, device, in_file:Path, out_file
     current_length = current_length + silent_length + len(seg_output)
   if out_file is None:
     *_, name, ckpt = cmd.model_ckpt.split('/')  # exp/megumin/model_228000.pt
-    out_file = in_file.parent / f'{in_file.stem}_{name}_{gen_metadata(cmd, ckpt)}{in_file.suffix}'
+    out_file = in_file.parent / f'{in_file.stem}_{name}_{gen_metadata(cmd, ckpt)}.flac'
   sf.write(out_file, result, args.data.sampling_rate)
 
 
@@ -380,5 +380,5 @@ if __name__ == '__main__':
     if outfile is not None and outfile.suffix[1:].upper() not in sf.available_formats():
       outfile.mkdir(parents=True, exist_ok=True)
       *_, name, ckpt = cmd.model_ckpt.split('/')  # exp/megumin/model_228000.pt
-      f_o = outfile / f'{f.stem}_{name}_{gen_metadata(cmd, ckpt)}{f.suffix}'
+      f_o = outfile / f'{f.stem}_{name}_{gen_metadata(cmd, ckpt)}.flac'
     infer_file(model, vocoder, ucoder, args, cmd, device, f, f_o)

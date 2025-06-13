@@ -23,7 +23,8 @@ import torch
 from omegaconf import OmegaConf
 
 from optimizer import lr_scheduler
-from optimizer.muon import Muon_AdamW
+# from optimizer.muon import Muon_AdamW
+from optimizer.muon_moonshot import get_params_for_muon, Muon
 from logger import utils
 from reflow.data_loaders import get_data_loaders
 from reflow.vocoder import Vocoder, Unit2Wav
@@ -86,7 +87,9 @@ if __name__ == '__main__':
     model.to(args.device)
     
     # load parameters
-    optimizer = Muon_AdamW(model, muon_args={'weight_decay': args.train.weight_decay}, adamw_args={'weight_decay': 0})
+    pm, po = get_params_for_muon(model)
+    optimizer = Muon(args.train.lr, args.train.weight_decay, pm, adamw_params=po)
+    # optimizer = Muon_AdamW(model, muon_args={'weight_decay': args.train.weight_decay}, adamw_args={'weight_decay': 0})
     global_step, model, optimizer = utils.load_model(args.env.expdir, model, optimizer, device=args.device)
     if global_step == 0 and args.env.resume_path is not None:
         # 尝试加载底模
