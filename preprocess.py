@@ -1,9 +1,11 @@
 '''
 cd D:\Code\projects\DDSP-SVC
-$python="D:\Software\SVC-Fusion\project\.conda\python.exe"
-& $python preprocess.py -c configs/reflow_fritia.yaml
-& $python preprocess.py -c configs/reflow_kazuma.yaml
-& $python preprocess.py -c configs/reflow_megumin.yaml
+$python="D:/Software/SVC-Fusion/project/.conda/python.exe"
+
+& $python preprocess.py -c configs/acacia.yaml
+& $python preprocess.py -c configs/fritia.yaml
+& $python preprocess.py -c configs/kazuma.yaml
+& $python preprocess.py -c configs/megumin.yaml
 
 cd /data/cxp/toys/DDSP-SVC/
 conda activate ddsp
@@ -156,6 +158,7 @@ if __name__ == '__main__':
   frange = None
   if cmd.split is not None:
     split, *frange = cmd.split.split('_')
+    frange = None if len(frange)==0 else frange
   print(f'{split=}, {frange=}')
 
   device = cmd.device

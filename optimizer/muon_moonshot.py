@@ -4,31 +4,39 @@ import torch
 import torch.nn as nn
 
 
-def get_params_for_muon(model):
+def get_params_for_muon(model: nn.Module):
   """
-    Filter parameters of a module into two groups: those that can be optimized by Muon,
-    and those that should be optimized by a standard optimizer.
+    Split parameters into those that can be optimized by Muon (2-D, non-Embedding)
+    and those that should use a standard optimizer.
+
     Args:
-        module: The module to filter parameters for.
+        model: The model to scan.
+
     Returns:
-        A list of parameters that should be optimized with muon.
+        (muon_params, other_params): Two lists of unique parameters.
     """
-  muon_params = []
-  other_params = []
+  muon_params, other_params = set(), set()
+
   for module in model.modules():
+    # recurse=False 只返回自身持有的参数，避免重复遍历
     for param in module.parameters(recurse=False):
       if not param.requires_grad:
         continue
-      if not isinstance(module, nn.Embedding) and param.ndim >= 2:
-        muon_params.append(param)
+      if not isinstance(module, nn.Embedding) and param.ndim == 2:
+        muon_params.add(param)
       else:
-        other_params.append(param)
+        other_params.add(param)
+  # 转换为 list 并保持确定性顺序（按 id 排序即可）
+  muon_params = sorted(muon_params, key=lambda p: p.data_ptr())
+  other_params = sorted(other_params, key=lambda p: p.data_ptr())
+  print(f'sort {len(muon_params)} params for moun, and {len(other_params)} others')
   return muon_params, other_params
 
 
 # This code snippet is a modified version adapted from the following GitHub repository:
 # https://github.com/KellerJordan/Muon/blob/master/muon.py
-@torch.compile
+# TODO 安装uv&新python环境&pytorch>2.7&安装triton@https://github.com/woct0rdho/triton-windows
+# @torch.compile
 def zeropower_via_newtonschulz5(G, steps):
   """https://github.com/MoonshotAI/Moonlight/blob/master/examples/toy_train.py#L49
     Newton-Schulz iteration to compute the zeroth power / orthogonalization of G. We opt to use a

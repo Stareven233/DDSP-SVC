@@ -74,7 +74,7 @@ def linear_warmup_decay(optimizer: Optimizer, warmup_steps: int, decay_per_steps
     nonlocal last_decay_step
     if step < warmup_steps:  # linear warmup
       return step / warmup_steps
-    elif (step - last_decay_step) > decay_per_steps:
+    elif (step - last_decay_step) >= decay_per_steps:
       last_decay_step = step
       rate *= decay_rate
     return rate

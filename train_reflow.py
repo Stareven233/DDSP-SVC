@@ -1,11 +1,10 @@
 '''
 cd D:\Code\projects\DDSP-SVC
 $python="D:\Software\SVC-Fusion\project\.conda\python.exe"
-& $python train_reflow.py -c configs/reflow_fritia.yaml
-& $python train_reflow.py -c configs/reflow_megumin.yaml
-& $python train_reflow.py -c configs/reflow_kazuma.yaml
-
-& $python train_reflow.py -c configs/reflow_annealing.yaml
+& $python train_reflow.py -c configs/acacia.yaml
+& $python train_reflow.py -c configs/fritia.yaml
+& $python train_reflow.py -c configs/megumin.yaml
+& $python train_reflow.py -c configs/kazuma.yaml
 
 screen -S ddsp python train_reflow.py -c configs/reflow.yaml
 screen -S ddsp python train_reflow.py -c configs/reflow_tune.yaml
@@ -13,7 +12,6 @@ screen -S ddsp python train_reflow.py -c configs/reflow_tune.yaml
 tensorboard --logdir D:/Code/projects/DDSP-SVC/exp
 '''
 
-import os
 import argparse
 import traceback
 from pathlib import Path
@@ -99,7 +97,7 @@ if __name__ == '__main__':
         param_group['lr'] = args.train.lr * args.train.gamma ** max((global_step-2) // args.train.decay_step, 0)
 
     # scheduler = lr_scheduler.StepLR(optimizer, step_size=args.train.decay_step, gamma=args.train.gamma, last_epoch=global_step-2)
-    scheduler = lr_scheduler.linear_warmup_decay(optimizer, 200, args.train.decay_step, args.train.gamma, last_steps=global_step-2)
+    scheduler = lr_scheduler.linear_warmup_decay(optimizer, 200, args.train.decay_step, args.train.gamma, last_steps=global_step)
     # datas
     loader_train, loader_valid = get_data_loaders(args, whole_audio=False, selected_audio_pattern=args.data.selected_audio_pattern)
     exp_name = args.env.expdir.split('/')[-1]

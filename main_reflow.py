@@ -1,22 +1,21 @@
-'''
+r'''
 cd D:/code/Projects/DDSP-SVC
 nvidia-smi
 $python = "D:/Software/SVC-Fusion/project/.conda/python.exe"
 
 $model = "exp/kazuma/model_11600.pt"
-$model = "exp/fritia/model_4500.pt"
 $model = "exp/megumin/model_9200.pt"
-$indir = "D:/Document/Audio/快乐的扑满"
-$indir = "F:/Unbra/Baito/ai-sings/春日影"
-$filename = "春日影_人声.flac"
+$model = "exp/fritia/model_4500.pt"
+$indir = "D:\Document\ai-sings\あなたがいた森"
+$filename = "Fate stay night あなたがいた森Hi-Res_Vocals_vocals_noreverb.flac"
 $key=0
 $vocal_key=0
 $formant_key=0
 
-& $python main_reflow.py -m $model -i "$indir/$filename.flac" -k $key -f $formant_key -v $vocal_key
+& $python main_reflow.py -m $model -i "$indir/$filename" -k $key -f $formant_key -v $vocal_key
+$mix="{1:0.8,2:0.2}"
+& $python main_reflow.py -m $model -i "$indir/$filename" -k $key -f $formant_key  -v $vocal_key -mix $mix
 & $python main_reflow.py -m $model -i "$indir" -k $key -f $formant_key  -v $vocal_key
-$mix="{1:0.1,2:0.9}"
-& $python main_reflow.py -m $model -i "$indir/$filename.flac" -k $key -f $formant_key  -v $vocal_key -mix $mix
 
 cd F:/CODE/!projects/DDSP-SVC
 uv run python main_reflow.py -m $model -i "$indir/$filename" -k $key -f $formant_key -v $vocal_key
@@ -28,7 +27,7 @@ import os
 import re
 import torch
 import fairseq
-torch.serialization.add_safe_globals([fairseq.data.dictionary.Dictionary])
+# torch.serialization.add_safe_globals([fairseq.data.dictionary.Dictionary])
 import librosa
 import argparse
 import numpy as np
