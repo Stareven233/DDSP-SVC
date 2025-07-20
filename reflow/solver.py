@@ -6,7 +6,7 @@ import librosa
 from logger.saver import Saver
 from logger import utils
 from torch import autocast
-from torch.amp import GradScaler
+from torch.cuda.amp import GradScaler
 from nsf_hifigan.nvSTFT import STFT
 
 
