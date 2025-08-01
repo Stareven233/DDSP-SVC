@@ -113,3 +113,33 @@ def warmup_stable_decay(optimizer: Optimizer, max_steps: int, warmup_ratio=0, de
       return t
   scheduler = lr_scheduler.LambdaLR(optimizer, inner)
   return scheduler
+
+
+def warmup_stage_decay(optimizer: Optimizer, decay_per_steps: int, max_steps: int, warmup_ratio=0.05, decay_ratio=0.2, decay_rate=0.1, last_steps=-1):
+  n_warmup = max_steps * warmup_ratio
+  n_warmup = max(0, min(n_warmup, decay_per_steps))
+  n_decay = max_steps * decay_ratio
+  decay_steps = max_steps - n_decay
+  rate = 1.0
+  last_decay_step = n_warmup
+  if last_steps > n_warmup:
+    n = (last_steps - n_warmup) // decay_per_steps
+    rate = decay_rate ** n
+    last_decay_step += decay_per_steps * n
+
+  def inner(step):
+    nonlocal rate
+    nonlocal last_decay_step
+    if step < n_warmup:  # linear warmup
+      return step / n_warmup
+    elif step < decay_steps and (step - last_decay_step) >= decay_per_steps:
+      last_decay_step = step
+      rate *= decay_rate
+    elif step >= decay_steps:
+      t = (step - decay_steps) / n_decay  # (0 -> 1)
+      t =  1 - t**0.5  # (1 -> 0)
+      return rate * t
+    return rate
+
+  scheduler = lr_scheduler.LambdaLR(optimizer, inner, last_steps)
+  return scheduler
