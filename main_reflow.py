@@ -4,35 +4,45 @@ nvidia-smi
 $python = "D:/Software/SVC-Fusion/project/.conda/python.exe"
 
 $model = "exp/kazuma/model_11600.pt"
-$model = "exp/megumin/model_9200.pt"
-$model = "exp/fritia/model_4500.pt"
-$indir = "D:\Document\ai-sings\あなたがいた森"
-$filename = "Fate stay night あなたがいた森Hi-Res_Vocals_vocals_noreverb.flac"
+$model = "exp/acacia/model_2000.pt"
+$model = "exp/fritia/model_3500.pt"
+$model = "exp/megumin/model_3200.pt"
+$indir = "D:\Document\ai-sings\銀の龍の背に乗って"
+$filename = "日本的国宝中岛美雪-骑在银龙的背上_vocals_noreverb_Vocals.flac"
+$indir = "D:\Document\ai-sings\霞光"
+$filename = "霞光清亮温柔女嗓翻唱_Vvn_mono.flac"
+$indir = "D:\Document\ai-sings\God Knows"
+$filename = "4K高清修复音源升级God Knows_Vocals_vocals_noreverb-new-au.flac"
+$indir = "D:\Document\ai-sings\黄昏"
+$filename = "黄昏_人声2.flac"
 $key=0
 $vocal_key=0
 $formant_key=0
 
 & $python main_reflow.py -m $model -i "$indir/$filename" -k $key -f $formant_key -v $vocal_key
 $mix="{1:0.8,2:0.2}"
-& $python main_reflow.py -m $model -i "$indir/$filename" -k $key -f $formant_key  -v $vocal_key -mix $mix
-& $python main_reflow.py -m $model -i "$indir" -k $key -f $formant_key  -v $vocal_key
+& $python main_reflow.py -m $model -i "$indir/$filename" -k $key -f $formant_key -v $vocal_key -mix $mix
+& $python main_reflow.py -m $model -i "$indir" -k $key -f $formant_key -v $vocal_key
 
 cd F:/CODE/!projects/DDSP-SVC
 uv run python main_reflow.py -m $model -i "$indir/$filename" -k $key -f $formant_key -v $vocal_key
 New-Item -Path "D:/Code/projects/ddsp6.2/pretrain/contentvec/checkpoint_best_legacy_500.pt" -ItemType HardLink -Target "D:/Software/SVC-Fusion/project/pretrain/contentvec/checkpoint_best_legacy_500.pt"
 New-Item -Path "D:/Code/projects/ddsp6.2/pretrain/rmvpe/model.pt" -ItemType HardLink -Target "D:/Software/SVC-Fusion/project/pretrain/rmvpe/model.pt"
 '''
+#AI翻唱 #RIFT  #芙提雅  #尘白禁区  #精灵世纪 #霞光 
+#童年 #怀旧 #经典 #华语MV
+
 
 import os
 import re
 import torch
-import fairseq
+# import fairseq
 # torch.serialization.add_safe_globals([fairseq.data.dictionary.Dictionary])
 import librosa
 import argparse
 import numpy as np
 import soundfile as sf
-import parselmouth
+# import parselmouth
 import hashlib
 from ast import literal_eval
 from slicer import Slicer
@@ -119,6 +129,7 @@ def parse_args(args=None, namespace=None):
       type=int,
       required=False,
       default=0,
+      # 输入正值表示先降key进行推理再让声码器升回来
       help="vocal register changed (number of semitones) , only for pc-type vocoder| default: 0",
   )
   parser.add_argument(
@@ -212,7 +223,7 @@ def gen_metadata(args, ckpt):
   m = step_patten.search(ckpt)
   assert m is not None
   s = int(m.group(0)) / 1000
-  s = f'{s}ks_{args.key}k_{args.vocal_register_shift_key}vk'
+  s = f'ddsp@{s}ks_{args.key}k_{args.vocal_register_shift_key}vk'
   if args.formant_shift_key != 0:
     s += f'_{args.formant_shift_key}fk'
   mix_dict = args.spk_mix_dict
