@@ -8,20 +8,23 @@ $model = "exp/acacia/model_2000.pt"
 $model = "exp/fritia/model_3500.pt"
 $model = "exp/megumin/model_3200.pt"
 $indir = "D:\Document\ai-sings\銀の龍の背に乗って"
-$filename = "日本的国宝中岛美雪-骑在银龙的背上_vocals_noreverb_Vocals.flac"
-$indir = "D:\Document\ai-sings\霞光"
-$filename = "霞光清亮温柔女嗓翻唱_Vvn_mono.flac"
-$indir = "D:\Document\ai-sings\God Knows"
-$filename = "4K高清修复音源升级God Knows_Vocals_vocals_noreverb-new-au.flac"
-$indir = "D:\Document\ai-sings\黄昏"
-$filename = "黄昏_人声2.flac"
+$indir = "D:\Document\ai-sings"
+$path = "$indir\God Knows\4K高清修复音源升级God Knows_Vocals_vocals_noreverb-new-au.flac"
+$path = "$indir\黄昏\黄昏_人声2.flac"
+$path = "$indir\銀の龍の背に乗って\骑在银龙的背上_vnV.flac"
+$path = "$indir\TAIDADA\TAIDADA_反相不纯人声_Vocals_vocals_noreverb.flac"
+$path = "$indir\虫儿飞\童声歌唱家冯晓菲奶声虫儿飞带你净化心灵_Vocals_vocals_noreverb.flac"
+$path = "$indir\最后一页\顾疚疚最后一页_Vocals_vocals.flac"
+$path = "$indir\Ending Note\Ending Note 門谷純_Vocals_vocals.flac"
+
+
 $key=0
 $vocal_key=0
 $formant_key=0
 
-& $python main_reflow.py -m $model -i "$indir/$filename" -k $key -f $formant_key -v $vocal_key
+& $python main_reflow.py -m $model -i "$path" -k $key -f $formant_key -v $vocal_key
 $mix="{1:0.8,2:0.2}"
-& $python main_reflow.py -m $model -i "$indir/$filename" -k $key -f $formant_key -v $vocal_key -mix $mix
+& $python main_reflow.py -m $model -i "$path" -k $key -f $formant_key -v $vocal_key -mix $mix
 & $python main_reflow.py -m $model -i "$indir" -k $key -f $formant_key -v $vocal_key
 
 cd F:/CODE/!projects/DDSP-SVC
@@ -36,8 +39,8 @@ New-Item -Path "D:/Code/projects/ddsp6.2/pretrain/rmvpe/model.pt" -ItemType Hard
 import os
 import re
 import torch
-# import fairseq
-# torch.serialization.add_safe_globals([fairseq.data.dictionary.Dictionary])
+import fairseq
+torch.serialization.add_safe_globals([fairseq.data.dictionary.Dictionary])
 import librosa
 import argparse
 import numpy as np
@@ -81,15 +84,18 @@ def parse_args(args=None, namespace=None):
       "-i",
       "--input",
       type=str,
+      nargs='+',
       required=True,
-      help="path to the input audio file",
+      help="path /dir to the input audio files",
   )
   parser.add_argument(
       "-o",
       "--output",
       type=str,
+      nargs='+',
       required=False,
-      help="path to the output audio file",
+      default=(),
+      help="path to the output audio files, only works when --input not includes dir",
   )
   parser.add_argument(
       "-id",
@@ -215,14 +221,14 @@ def cross_fade(a: np.ndarray, b: np.ndarray, idx: int):
   return result
 
 
-
 step_patten = re.compile('(?<=model_)\d+')  # model_180000.pt
 def gen_metadata(args, ckpt):
   # ckpt = ckpt.removeprefix('model_').removesuffix('.pt')
   ckpt = args.model_ckpt.split('/')[-1]  # exp/megumin/model_228000.pt
   m = step_patten.search(ckpt)
-  assert m is not None
-  s = int(m.group(0)) / 1000
+  s = '0'
+  if m is not None:
+    s = int(m.group(0)) / 1000
   s = f'ddsp@{s}ks_{args.key}k_{args.vocal_register_shift_key}vk'
   if args.formant_shift_key != 0:
     s += f'_{args.formant_shift_key}fk'
@@ -377,18 +383,18 @@ if __name__ == '__main__':
     cnhubertsoft_gate = 10
   ucoder = Units_Encoder(args.data.encoder, args.data.encoder_ckpt, args.data.encoder_sample_rate, args.data.encoder_hop_size, cnhubertsoft_gate=cnhubertsoft_gate, device=device)
 
-  infile = Path(cmd.input)
-  if not infile.is_dir():
-    files = (infile, )
-  else:
-    files = infile.iterdir()
-  outfile = Path(cmd.output) if cmd.output else None
-  for f in files:
+  infiles = []
+  outfiles = tuple(Path(i) for i in cmd.output)
+  for i in cmd.input:
+    i = Path(i)
+    if not i.is_dir():
+      infiles.append(i)
+      continue
+    infiles.extend(i.iterdir())
+    outfiles = None
+
+  for i, f in enumerate(infiles):
     if f.suffix[1:].upper() not in sf.available_formats():
       continue
-    f_o = outfile
-    if outfile is not None and outfile.suffix[1:].upper() not in sf.available_formats():
-      outfile.mkdir(parents=True, exist_ok=True)
-      *_, name, ckpt = cmd.model_ckpt.split('/')  # exp/megumin/model_228000.pt
-      f_o = outfile / f'{f.stem}_{name}_{gen_metadata(cmd, ckpt)}.flac'
+    f_o = len(outfiles) > 0 and outfiles[i] or None
     infer_file(model, vocoder, ucoder, args, cmd, device, f, f_o)
