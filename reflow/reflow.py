@@ -28,6 +28,7 @@ class RectifiedFlow(nn.Module):
         elif loss_type == 'l2':
             loss = F.mse_loss(x_1 - x_0, v_pred)
         elif loss_type == 'l2_lognorm':
+            # 0.398942: 1/sqrt(2*pi)
             weights = 0.398942 / t / (1 - t) * torch.exp(-0.5 * torch.log(t / ( 1 - t)) ** 2)
             loss = torch.mean(weights[:, None, None, None] * F.mse_loss(x_1 - x_0, v_pred, reduction='none'))
         else:

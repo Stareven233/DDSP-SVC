@@ -2,6 +2,7 @@
 cd D:\Code\projects\DDSP-SVC
 $python="D:/Software/SVC-Fusion/project/.conda/python.exe"
 
+& $python preprocess.py -c configs/aino.yaml
 & $python preprocess.py -c configs/acacia.yaml
 & $python preprocess.py -c configs/fritia.yaml
 & $python preprocess.py -c configs/kazuma.yaml

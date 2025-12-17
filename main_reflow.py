@@ -15,8 +15,8 @@ $path = "$indir\銀の龍の背に乗って\骑在银龙的背上_vnV.flac"
 $path = "$indir\TAIDADA\TAIDADA_反相不纯人声_Vocals_vocals_noreverb.flac"
 $path = "$indir\虫儿飞\童声歌唱家冯晓菲奶声虫儿飞带你净化心灵_Vocals_vocals_noreverb.flac"
 $path = "$indir\最后一页\顾疚疚最后一页_Vocals_vocals.flac"
-$path = "$indir\Ending Note\Ending Note 門谷純_Vocals_vocals.flac"
-
+$path = "$indir\Ending Note\Ending Note 門谷純_Vocals_vocals_noreverb.flac"
+$path = "$indir\君は薔薇より美しい\布施明 君は薔薇より美しい 你比玫瑰更美丽_Vocals_vocals_noreverb_megumin_sov@5k_0vk.flac"
 
 $key=0
 $vocal_key=0
