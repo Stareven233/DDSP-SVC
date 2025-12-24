@@ -98,7 +98,7 @@ def convert_tensor_to_numpy(tensor, is_squeeze=True):
 def load_model(expdir, model, optimizer, name='model', postfix='', device='cpu'):
     def _load(path):
         print(' [*] restoring model from', path)
-        ckpt = torch.load(path, map_location=torch.device(device))
+        ckpt = torch.load(path, map_location=torch.device(device), weights_only=True)
         model.load_state_dict(ckpt['model'], strict=False)
         if ckpt.get('optimizer') != None:
             optimizer.load_state_dict(ckpt['optimizer'])

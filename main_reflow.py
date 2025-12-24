@@ -5,8 +5,9 @@ $python = "D:/Software/SVC-Fusion/project/.conda/python.exe"
 
 $model = "exp/kazuma/model_11600.pt"
 $model = "exp/acacia/model_2000.pt"
-$model = "exp/fritia/model_3500.pt"
 $model = "exp/megumin/model_3200.pt"
+$model = "exp/fritia/model_3500.pt"
+$name = 'aino'
 $indir = "D:\Document\ai-sings\銀の龍の背に乗って"
 $indir = "D:\Document\ai-sings"
 $path = "$indir\God Knows\4K高清修复音源升级God Knows_Vocals_vocals_noreverb-new-au.flac"
@@ -17,14 +18,17 @@ $path = "$indir\虫儿飞\童声歌唱家冯晓菲奶声虫儿飞带你净化心
 $path = "$indir\最后一页\顾疚疚最后一页_Vocals_vocals.flac"
 $path = "$indir\Ending Note\Ending Note 門谷純_Vocals_vocals_noreverb.flac"
 $path = "$indir\君は薔薇より美しい\布施明 君は薔薇より美しい 你比玫瑰更美丽_Vocals_vocals_noreverb_megumin_sov@5k_0vk.flac"
+$path = "$indir\春庭雪\4k无损春庭雪橙翼_Vocals_vocals_noreverb_sov@fritia_23.19ks_4k_0vk.flac"
+$path = "$indir\新月的摇篮曲 (其一)  伴月同眠\哥伦比娅 伴月同眠 - 测试服废案_Vocals_vocals_noreverb_爱诺_sov@0k_0vk_rift@aino_3.6ks_0k_-60.0st.flac"
 
 $key=0
 $vocal_key=0
 $formant_key=0
 
-& $python main_reflow.py -m $model -i "$path" -k $key -f $formant_key -v $vocal_key
+& $python main_reflow.py -n $name -i "$path" -k $key -f $formant_key -v $vocal_key
 $mix="{1:0.8,2:0.2}"
 & $python main_reflow.py -m $model -i "$path" -k $key -f $formant_key -v $vocal_key -mix $mix
+& $python main_reflow.py -m $model -i "$path" -k $key -f $formant_key -v $vocal_key
 & $python main_reflow.py -m $model -i "$indir" -k $key -f $formant_key -v $vocal_key
 
 cd F:/CODE/!projects/DDSP-SVC
@@ -32,28 +36,29 @@ uv run python main_reflow.py -m $model -i "$indir/$filename" -k $key -f $formant
 New-Item -Path "D:/Code/projects/ddsp6.2/pretrain/contentvec/checkpoint_best_legacy_500.pt" -ItemType HardLink -Target "D:/Software/SVC-Fusion/project/pretrain/contentvec/checkpoint_best_legacy_500.pt"
 New-Item -Path "D:/Code/projects/ddsp6.2/pretrain/rmvpe/model.pt" -ItemType HardLink -Target "D:/Software/SVC-Fusion/project/pretrain/rmvpe/model.pt"
 '''
-#AI翻唱 #RIFT  #芙提雅  #尘白禁区  #精灵世纪 #霞光 
-#童年 #怀旧 #经典 #华语MV
 
 
 import os
 import re
-import torch
-import fairseq
-torch.serialization.add_safe_globals([fairseq.data.dictionary.Dictionary])
 import librosa
 import argparse
 import numpy as np
 import soundfile as sf
-# import parselmouth
+from pathlib import Path
 import hashlib
+
+# import parselmouth
 from ast import literal_eval
+import torch
+import fairseq
+torch.serialization.add_safe_globals([fairseq.data.dictionary.Dictionary])
+from tqdm import tqdm
+
 from slicer import Slicer
 from ddsp.vocoder import F0_Extractor, Volume_Extractor, Units_Encoder
 from ddsp.core import upsample
 from reflow.vocoder import load_model_vocoder
-from tqdm import tqdm
-from pathlib import Path
+from util.io import find_nth_sub_path
 
 
 def check_args(ddsp_args, diff_args):
@@ -72,12 +77,13 @@ def check_args(ddsp_args, diff_args):
 def parse_args(args=None, namespace=None):
   """Parse command-line arguments."""
   parser = argparse.ArgumentParser()
+  parser.add_argument('-n', '--name', type=str, required=True, help='name for this exp')
   parser.add_argument(
       "-m",
       "--model_ckpt",
       type=str,
-      required=True,
-      help="path to the model checkpoint",
+      default=None,
+      help="path to the model checkpoint, None for newest ckpt in exp/name",
   )
   parser.add_argument("-d", "--device", type=str, default=None, required=False, help="cpu or cuda, auto if not set")
   parser.add_argument(
@@ -100,7 +106,7 @@ def parse_args(args=None, namespace=None):
   parser.add_argument(
       "-id",
       "--spk_id",
-      type=str,
+      type=int,
       required=False,
       default=1,
       help="speaker id (for multi-speaker model) | default: 1",
@@ -222,14 +228,14 @@ def cross_fade(a: np.ndarray, b: np.ndarray, idx: int):
 
 
 step_patten = re.compile('(?<=model_)\d+')  # model_180000.pt
-def gen_metadata(args, ckpt):
+def gen_metadata(args, ckpt, name):
   # ckpt = ckpt.removeprefix('model_').removesuffix('.pt')
   ckpt = args.model_ckpt.split('/')[-1]  # exp/megumin/model_228000.pt
   m = step_patten.search(ckpt)
   s = '0'
   if m is not None:
     s = int(m.group(0)) / 1000
-  s = f'ddsp@{s}ks_{args.key}k_{args.vocal_register_shift_key}vk'
+  s = f'ddsp@{name}_{s}ks_{args.key}k_{args.vocal_register_shift_key}vk'
   if args.formant_shift_key != 0:
     s += f'_{args.formant_shift_key}fk'
   mix_dict = args.spk_mix_dict
@@ -300,11 +306,12 @@ def infer_file(model, vocoder, ucoder, args, cmd, device, in_file:Path, out_file
 
   # speaker id or mix-speaker dictionary
   spk_mix_dict = literal_eval(cmd.spk_mix_dict)
-  spk_id = torch.LongTensor(np.array([[int(cmd.spk_id)]])).to(device)
+  spk_id = torch.LongTensor(np.array([[cmd.spk_id]])).to(device)
   if spk_mix_dict is not None:
     print('Mix-speaker mode')
   else:
-    print('Speaker ID: ' + str(int(cmd.spk_id)))
+    # print(f'Speaker ID: {cmd.spk_id}, speaker: {args.spks[cmd.spk_id]}')
+    print(f'Speaker ID: {cmd.spk_id}')
 
   # sampling method
   if cmd.method == 'auto':
@@ -362,7 +369,7 @@ def infer_file(model, vocoder, ucoder, args, cmd, device, in_file:Path, out_file
     current_length = current_length + silent_length + len(seg_output)
   if out_file is None:
     *_, name, ckpt = cmd.model_ckpt.split('/')  # exp/megumin/model_228000.pt
-    out_file = in_file.parent / f'{in_file.stem}_{name}_{gen_metadata(cmd, ckpt)}.flac'
+    out_file = in_file.parent / f'{in_file.stem}_{gen_metadata(cmd, ckpt, name)}.flac'
   sf.write(out_file, result, args.data.sampling_rate)
 
 
@@ -373,7 +380,10 @@ if __name__ == '__main__':
   device = cmd.device
   if device is None:
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
+  exp_dir = Path('exp', cmd.name)
 
+  if cmd.model_ckpt is None:
+    cmd.model_ckpt = find_nth_sub_path(exp_dir, r'model_(\d+)\.pt').as_posix()
   # load reflow model
   model, vocoder, args = load_model_vocoder(cmd.model_ckpt, device=device)
   # load units encoder

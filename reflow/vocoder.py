@@ -20,9 +20,7 @@ class DotDict(dict):
     __delattr__ = dict.__delitem__
 
 
-def load_model_vocoder(
-        model_path,
-        device='cpu'):
+def load_model_vocoder(model_path, device='cpu'):
     config_file = os.path.join(os.path.split(model_path)[0], 'config.yaml')
     with open(config_file, "r") as config:
         args = yaml.safe_load(config)

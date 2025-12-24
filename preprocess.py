@@ -1,8 +1,14 @@
-'''
+r'''
 cd D:\Code\projects\DDSP-SVC
-$python="D:/Software/SVC-Fusion/project/.conda/python.exe"
+$python='D:/Software/SVC-Fusion/project/.conda/python.exe'
+$python = 'D:/Code/projects/RIFT-SVC/.venv/Scripts/python.exe'
 
-& $python preprocess.py -c configs/aino.yaml
+$name='aino'
+# 数据输入在 $src_dir 里，切完了手动放到各自文件夹
+$src_dir="D:\Document\Audio\!raw\爱诺"
+& $python util/fap/main.py slice-audio-v2 $src_dir "data/$name" --max-duration 15.0 --num-workers 2 --flat-layout --merge-short
+& $python preprocess.py -n $name data.f0_extractor=fcpe
+
 & $python preprocess.py -c configs/acacia.yaml
 & $python preprocess.py -c configs/fritia.yaml
 & $python preprocess.py -c configs/kazuma.yaml
@@ -20,6 +26,8 @@ import numpy as np
 import random
 import librosa
 import torch
+import fairseq
+torch.serialization.add_safe_globals([fairseq.data.dictionary.Dictionary])
 from omegaconf import OmegaConf
 # import pyworld as pw
 # import parselmouth
@@ -31,16 +39,44 @@ from logger import utils
 from ddsp.vocoder import F0_Extractor, Volume_Extractor, Units_Encoder
 from reflow.vocoder import Vocoder
 
-# import concurrent.futures
 
-
-def parse_args(args=None, namespace=None):
-  """Parse command-line arguments."""
+def handle_config(args=None, namespace=None):
+  '''Parse command-line arguments.'''
   parser = argparse.ArgumentParser()
-  parser.add_argument("-c", "--config", type=str, required=True, help="path to the config file")
-  parser.add_argument("-d", "--device", type=str, default='cuda:0', required=False, help="cpu or cuda, auto if not set")
-  parser.add_argument("-s", "--split", type=str, default=None, required=False, help="train/val_1_8: 训练或验证集数据，划分八份，预处理第一份")
-  return parser.parse_args(args=args, namespace=namespace)
+  parser.add_argument('-n', '--name', type=str, required=True, help='name for this exp')
+  parser.add_argument('-c', '--config', type=str, default='configs/finetune.yaml', help='path to the config file')
+  parser.add_argument('-d', '--device', type=str, default='cuda:0', required=False, help='cpu or cuda, auto if not set')
+  parser.add_argument('-s', '--split', type=str, default=None, required=False, help='train/val_1_8: 训练或验证集数据，划分八份，预处理第一份')
+  # return parser.parse_args(args=args, namespace=namespace)
+
+  args, unknown_args = parser.parse_known_args(args=args, namespace=namespace)
+  split = None
+  args.frange = None
+  if args.split is not None:
+    split, *frange = args.split.split('_')
+    frange = args.frange if len(frange)==0 else frange
+    args.split, args.frange = split, frange
+  print(f'{args.split=}, {args.frange=}')
+
+  if args.device is None:
+    args.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+  print(f'{args.device=}')
+
+  # load config
+  cfg = OmegaConf.load(args.config)
+  if cfg.env.resume_path and (resume_path := Path(cfg.env.resume_path)).is_file():
+    resume_config = resume_path.with_suffix('.yaml')
+    cfg = OmegaConf.merge(OmegaConf.load(resume_config), cfg)
+  # https://omegaconf.readthedocs.io/en/2.3_branch/usage.html#omegaconf-merge
+  unknown_args.extend((
+    f'data.train_path=data/{args.name}/train', f'data.valid_path=data/{args.name}/val', f'env.expdir=exp/{args.name}'
+  ))
+  cfg = OmegaConf.merge(cfg, OmegaConf.from_dotlist(unknown_args))
+
+  exp_dir = Path(cfg.env.expdir)
+  exp_dir.mkdir(parents=True, exist_ok=True)
+  OmegaConf.save(cfg, exp_dir / 'config.yaml', resolve=True)
+  return cfg, args
 
 
 def preprocess(path, f0_extractor, volume_extractor, mel_extractor, units_encoder, sample_rate, hop_size, device='cuda', use_pitch_aug=False, extensions=['wav'], frange=None):
@@ -154,28 +190,13 @@ def preprocess(path, f0_extractor, volume_extractor, mel_extractor, units_encode
 if __name__ == '__main__':
   # parse commands
   print('pasing arguments')
-  cmd = parse_args()
-  split = None
-  frange = None
-  if cmd.split is not None:
-    split, *frange = cmd.split.split('_')
-    frange = None if len(frange)==0 else frange
-  print(f'{split=}, {frange=}')
-
+  args, cmd = handle_config()
+  split = cmd.split
+  frange = cmd.frange
   device = cmd.device
-  if device is None:
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-  print(f'{device=}')
-
-  # load config
-  args = OmegaConf.load(cmd.config)
-  if args.env.resume_path and (resume_path := Path(args.env.resume_path)).is_file():
-      resume_config = resume_path.with_suffix('.yaml')
-      args = OmegaConf.merge(OmegaConf.load(resume_config), args)
-  args = utils.DotDict(OmegaConf.to_container(args))
+  # args = utils.DotDict(OmegaConf.to_container(args))
   sample_rate = args.data.sampling_rate
   hop_size = args.data.block_size
-
   extensions = args.data.extensions
 
   # initialize f0 extractor

@@ -1,12 +1,8 @@
-import os
 import numpy as np
-import yaml
 import torch
 import torch.nn.functional as F
 import pyworld as pw
 import parselmouth
-import torchcrepe
-import resampy
 from transformers import HubertModel, Wav2Vec2FeatureExtractor
 from fairseq import checkpoint_utils
 from encoder.hubert.model import HubertSoft
@@ -90,6 +86,8 @@ class F0_Extractor:
         
         # extract f0 using crepe        
         elif self.f0_extractor == 'crepe':
+            import torchcrepe
+
             if device is None:
                 device = 'cuda' if torch.cuda.is_available() else 'cpu'
             resample_kernel = self.resample_kernel.to(device)

@@ -1,11 +1,14 @@
-'''
+r'''
 cd D:\Code\projects\DDSP-SVC
 $python="D:\Software\SVC-Fusion\project\.conda\python.exe"
+
+& $python train_reflow.py -n aino
+
+
 & $python train_reflow.py -c configs/fritia.yaml
 & $python train_reflow.py -c configs/acacia.yaml
 & $python train_reflow.py -c configs/megumin.yaml
 & $python train_reflow.py -c configs/kazuma.yaml
-
 screen -S ddsp python train_reflow.py -c configs/reflow.yaml
 screen -S ddsp python train_reflow.py -c configs/reflow_tune.yaml
 
@@ -18,6 +21,8 @@ from pathlib import Path
 
 import torch
 # from torch.optim import lr_scheduler
+import fairseq
+torch.serialization.add_safe_globals([fairseq.data.dictionary.Dictionary])
 from omegaconf import OmegaConf
 
 from optimizer import lr_scheduler
@@ -27,31 +32,34 @@ from logger import utils
 from reflow.data_loaders import get_data_loaders
 from reflow.vocoder import Vocoder, Unit2Wav
 from logger.saver import Saver
+from logger.utils import DotDict
 
 
-def parse_args(args=None, namespace=None):
+def handle_config(args=None, namespace=None):
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-c",
-        "--config",
-        type=str,
-        required=True,
-        help="path to the config file")
-    return parser.parse_args(args=args, namespace=namespace)
-
+    parser.add_argument('-n', '--name', type=str, required=True, help='name for this exp')
+    parser.add_argument('-c', '--config', type=str, default=None, help='path to the config file (default: exp/$name/config.yaml)')
+    # return parser.parse_args(args=args, namespace=namespace)
+    args, unknown_args = parser.parse_known_args(args=args, namespace=namespace)
+    if args.config is None:
+        args.config = f'exp/{args.name}/config.yaml'
+    
+    # load config
+    print(' > config:', args.config)
+    cfg = OmegaConf.load(args.config)
+    if cfg.env.resume_path and (resume_path := Path(cfg.env.resume_path)).is_file():
+        resume_config = resume_path.with_suffix('.yaml')
+        cfg = OmegaConf.merge(OmegaConf.load(resume_config), cfg)
+    # unknown_args.extend()
+    cfg = OmegaConf.merge(cfg, OmegaConf.from_dotlist(unknown_args))
+    args = DotDict(**OmegaConf.to_container(cfg))
+    return args
 
 if __name__ == '__main__':
     # parse commands
-    cmd = parse_args()
-    
-    # load config
-    print(' > config:', cmd.config)
-    args = OmegaConf.load(cmd.config)
-    if args.env.resume_path and (resume_path := Path(args.env.resume_path)).is_file():
-        resume_config = resume_path.with_suffix('.yaml')
-        args = OmegaConf.merge(OmegaConf.load(resume_config), args)
-    args = utils.DotDict(OmegaConf.to_container(args))
+    args = handle_config()
+    # Saver 初始化时会自动保存args
     print(' >    exp:', args.env.expdir)
     
     # load vocoder

@@ -1,7 +1,5 @@
 fairseq
 FreeSimpleGUI
-gin
-gin_config
 librosa
 matplotlib
 numpy==1.26.4
@@ -16,6 +14,6 @@ soundfile
 tensorboard
 torch
 torchcrepe
-torchfcpe
 tqdm
 transformers
+# torchfcpe
