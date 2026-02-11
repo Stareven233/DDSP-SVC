@@ -1,12 +1,12 @@
 r'''
 cd D:/code/Projects/DDSP-SVC
 nvidia-smi
-$python = 'D:/Code/projects/RIFT-SVC/.venv/Scripts/python.exe'
+$python = 'D:/Code/projects/Music-Source-Separation-Training/.venv/Scripts/python.exe'
 
 $name = 'aino'
 $name = 'megumin'
 $name = '「少女」'
-$indir = "D:\Document\ai-sings\銀の龍の背に乗って"
+$name = 'fritia'
 $indir = "D:\Document\ai-sings"
 $path = "$indir\God Knows\4K高清修复音源升级God Knows_Vocals_vocals_noreverb-new-au.flac"
 $path = "$indir\黄昏\黄昏_人声2.flac"
@@ -20,14 +20,15 @@ $path = "$indir\新月的摇篮曲 (其一)  伴月同眠\哥伦比娅 伴月同
 $path = "$indir\ツキアカリのミチシルベ\4K 60FPS黑之契约者 流星的双子 stereopony月光的指引_Vocals_vocals_sov@megumin_59.20ks_0k_0vk.flac"
 $path = "$indir\君は薔薇より美しい\布施明 君は薔薇より美しい 你比玫瑰更美丽_Vocals_vocals_noreverb_「少女」_sov@5k_0vk_16.8k.flac"
 $path = "${indir}/君は薔薇より美しい/君は薔薇より美しい_呼!_sov@「少女」_16.80ks_0k_0vk.flac"
+$path = "${indir}/届かない恋/𝟒𝐊白色相簿2 NCOP届不到的爱恋_Vocals_vocals_noreverb.flac"
 
-$key=12
-$vocal_key=3
+$key=0
+$vocal_key=0
 $formant_key=0
 
-& $python main_reflow.py -n $name -i "$path" -k $key -f $formant_key -v $vocal_key
 $mix="{1:0.8,2:0.2}"
-& $python main_reflow.py -m $model -i "$path" -k $key -f $formant_key -v $vocal_key -mix $mix
+& $python main_reflow.py -n $name -i "$path" -k $key -f $formant_key -v $vocal_key -mix $mix
+& $python main_reflow.py -n $name -i "$path" -k $key -f $formant_key -v $vocal_key
 & $python main_reflow.py -m $model -i "$path" -k $key -f $formant_key -v $vocal_key
 & $python main_reflow.py -m $model -i "$indir" -k $key -f $formant_key -v $vocal_key
 
@@ -47,11 +48,8 @@ import soundfile as sf
 from pathlib import Path
 import hashlib
 
-# import parselmouth
 from ast import literal_eval
 import torch
-import fairseq
-torch.serialization.add_safe_globals([fairseq.data.dictionary.Dictionary])
 from tqdm import tqdm
 
 from slicer import Slicer
@@ -149,8 +147,8 @@ def parse_args(args=None, namespace=None):
       "--pitch_extractor",
       type=str,
       required=False,
-      default='fcpe',
-      help="pitch extrator type: parselmouth, dio, harvest, crepe, fcpe, rmvpe (default)",
+      default='rmvpe',
+      help="pitch extrator type: parselmouth(need install), dio, harvest, crepe, fcpe, rmvpe (default)",
   )
   parser.add_argument(
       "-fmin",

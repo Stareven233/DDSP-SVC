@@ -22,8 +22,6 @@ from pathlib import Path
 
 import torch
 # from torch.optim import lr_scheduler
-import fairseq
-torch.serialization.add_safe_globals([fairseq.data.dictionary.Dictionary])
 from omegaconf import OmegaConf
 
 from optimizer import lr_scheduler

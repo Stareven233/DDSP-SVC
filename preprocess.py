@@ -22,18 +22,15 @@ python preprocess.py -c configs/reflow.yaml -s train_5_16
 
 import os
 from pathlib import Path
-import numpy as np
 import random
-import librosa
-import torch
-import fairseq
-torch.serialization.add_safe_globals([fairseq.data.dictionary.Dictionary])
-from omegaconf import OmegaConf
-# import pyworld as pw
-# import parselmouth
 import argparse
 import shutil
+
+import numpy as np
+import librosa
+import torch
 from tqdm import tqdm
+from omegaconf import OmegaConf
 
 from logger import utils
 from ddsp.vocoder import F0_Extractor, Volume_Extractor, Units_Encoder
@@ -47,6 +44,7 @@ def handle_config(args=None, namespace=None):
   parser.add_argument('-c', '--config', type=str, default='configs/finetune.yaml', help='path to the config file')
   parser.add_argument('-d', '--device', type=str, default='cuda:0', required=False, help='cpu or cuda, auto if not set')
   parser.add_argument('-s', '--split', type=str, default=None, required=False, help='train/val_1_8: 训练或验证集数据，划分八份，预处理第一份')
+  # parser.add_argument('-j', '--workers', type=int, default=2, required=False, help='number of worker processes (default: cpu_count)')
   # return parser.parse_args(args=args, namespace=namespace)
 
   args, unknown_args = parser.parse_known_args(args=args, namespace=namespace)
@@ -208,9 +206,8 @@ if __name__ == '__main__':
   print('Volume_Extractor initialized')
 
   # initialize mel extractor
-  mel_extractor = None
-  use_pitch_aug = False
   mel_extractor = Vocoder(args.vocoder.type, args.vocoder.ckpt, device=device)
+  use_pitch_aug = False
   print('Vocoder initialized')
   if mel_extractor.vocoder_sample_rate != sample_rate or mel_extractor.vocoder_hop_size != hop_size:
     print(f'Unmatch current/vocoder parameters {sample_rate=}/{mel_extractor.vocoder_sample_rate}, {hop_size=}/{mel_extractor.vocoder_hop_size}, mel extraction is ignored!')

@@ -6,11 +6,8 @@ import librosa
 import argparse
 import numpy as np
 import soundfile as sf
-import pyworld as pw
-import parselmouth
 import hashlib
 from ast import literal_eval
-from slicer import Slicer
 from ddsp.vocoder import F0_Extractor, Volume_Extractor, Units_Encoder
 from ddsp.core import upsample
 from reflow.vocoder import load_model_vocoder
@@ -158,7 +155,7 @@ def parse_args(args=None, namespace=None):
         type=str,
         required=False,
         default='rmvpe',
-        help="pitch extrator type: parselmouth, dio, harvest, crepe, fcpe, rmvpe (default)",
+        help="pitch extrator type: parselmouth(need install), dio, harvest, crepe, fcpe, rmvpe (default)",
     )
     parser.add_argument(
         "-fmin",

@@ -150,7 +150,6 @@ def test(args, model, vocoder, loader_test, saver: Saver):
             # 如果形状不同,裁剪使得形状相同
             if pre_mel.shape[1] != gt_mel.shape[1]:
                 gt_mel = gt_mel[:, :pre_mel.shape[1], :]
-            saver.log_spec(data['name'][0], gt_mel, pre_mel)
 
             # 计算指标
             mel_val_mse_all += torch.nn.functional.mse_loss(mel, data['mel']).detach().cpu().numpy()

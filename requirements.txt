@@ -1,12 +1,13 @@
-fairseq
-FreeSimpleGUI
+# -----不太用得上的功能
+# FreeSimpleGUI
+# resampy
+# praat-parselmouth
+# pyworld
+# -----不太用得上的功能
 librosa
 matplotlib
-numpy==1.26.4
-praat-parselmouth
-pyworld
+numpy
 PyYAML
-resampy
 scikit_learn
 scipy
 sounddevice
