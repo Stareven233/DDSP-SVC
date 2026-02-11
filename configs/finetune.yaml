@@ -54,14 +54,14 @@ train:
   cache_all_data: true # Save Internal-Memory or Graphics-Memory if it is false, but may be slow
   cache_device: cuda # Set to 'cuda' to cache the data into the Graphics-Memory, fastest speed for strong gpu
   cache_fp16: true
-  epochs: 6000
-  max_steps: 3600
+  epochs: 100
+  max_steps: ~
   interval_log: 100
   interval_val: 600
   interval_force_save: 600
-  lr: 2.0e-4
-  decay_step: 600
-  gamma: 0.7
+  lr: 1.0e-4
+  decay_step: 1000
+  gamma: 0.9
   weight_decay: 0.1
   lambda_ddsp: 1
   save_opt: false

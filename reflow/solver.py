@@ -215,8 +215,6 @@ def train(args, saver, model, optimizer, scheduler, vocoder, loader_train, loade
         dtype = torch.bfloat16
     else:
         raise ValueError(' [x] Unknown amp_dtype: ' + args.train.amp_dtype)
-    if args.train.max_steps is None:
-        args.train.max_steps = args.train.epochs * num_batches + 1
     for epoch in range(start_epoch, args.train.epochs):
         for batch_idx, data in enumerate(loader_train):
             if saver.global_step > args.train.max_steps:

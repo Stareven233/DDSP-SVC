@@ -2,7 +2,8 @@ r'''
 cd D:\Code\projects\DDSP-SVC
 $python="D:\Software\SVC-Fusion\project\.conda\python.exe"
 
-& $python train_reflow.py -n aino
+$name='「少女」'
+& $python train_reflow.py -n $name
 
 
 & $python train_reflow.py -c configs/fritia.yaml
@@ -104,16 +105,17 @@ if __name__ == '__main__':
         param_group['initial_lr'] = args.train.lr
         param_group['lr'] = args.train.lr * args.train.gamma ** max((global_step-2) // args.train.decay_step, 0)
 
-    # scheduler = lr_scheduler.StepLR(optimizer, step_size=args.train.decay_step, gamma=args.train.gamma, last_epoch=global_step-2)
-    scheduler = lr_scheduler.warmup_stage_decay(optimizer, args.train.decay_step, args.train.max_steps, decay_rate=args.train.gamma, last_steps=global_step)
     # datas
     loader_train, loader_valid = get_data_loaders(args, whole_audio=False, selected_audio_pattern=args.data.selected_audio_pattern)
+    if args.train.max_steps is None:
+        args['train']['max_steps'] = args.train.epochs * len(loader_train) + 1
+    # scheduler = lr_scheduler.StepLR(optimizer, step_size=args.train.decay_step, gamma=args.train.gamma, last_epoch=global_step-2)
+    scheduler = lr_scheduler.warmup_stage_decay(optimizer, args.train.decay_step, args.train.max_steps, decay_rate=args.train.gamma, last_steps=global_step)
     exp_name = args.env.expdir.split('/')[-1]
     # saver
     saver = Saver(args, initial_global_step=global_step)
-    
+
     def melt_save():
-        print('\n检测到 Ctrl+C，正在退出程序...')
         op = optimizer if args.train.save_opt else None
         saver.save_model(model, op, postfix=f'melt')
         print('已保存当前的模型权重及优化器状态...')
@@ -122,7 +124,7 @@ if __name__ == '__main__':
         train(args, saver, model, optimizer, scheduler, vocoder, loader_train, loader_valid)
         print('结束训练！')
     except KeyboardInterrupt:
-        print('中断训练！')
+        print('\n检测到 Ctrl+C，正在退出程序...')
     except Exception:
         err_log = f'error_{exp_name}.log'
         traceback.print_exc(file=open(err_log, 'w', encoding='utf-8'))

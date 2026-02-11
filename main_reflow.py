@@ -1,13 +1,11 @@
 r'''
 cd D:/code/Projects/DDSP-SVC
 nvidia-smi
-$python = "D:/Software/SVC-Fusion/project/.conda/python.exe"
+$python = 'D:/Code/projects/RIFT-SVC/.venv/Scripts/python.exe'
 
-$model = "exp/kazuma/model_11600.pt"
-$model = "exp/acacia/model_2000.pt"
-$model = "exp/megumin/model_3200.pt"
-$model = "exp/fritia/model_3500.pt"
 $name = 'aino'
+$name = 'megumin'
+$name = '「少女」'
 $indir = "D:\Document\ai-sings\銀の龍の背に乗って"
 $indir = "D:\Document\ai-sings"
 $path = "$indir\God Knows\4K高清修复音源升级God Knows_Vocals_vocals_noreverb-new-au.flac"
@@ -17,12 +15,14 @@ $path = "$indir\TAIDADA\TAIDADA_反相不纯人声_Vocals_vocals_noreverb.flac"
 $path = "$indir\虫儿飞\童声歌唱家冯晓菲奶声虫儿飞带你净化心灵_Vocals_vocals_noreverb.flac"
 $path = "$indir\最后一页\顾疚疚最后一页_Vocals_vocals.flac"
 $path = "$indir\Ending Note\Ending Note 門谷純_Vocals_vocals_noreverb.flac"
-$path = "$indir\君は薔薇より美しい\布施明 君は薔薇より美しい 你比玫瑰更美丽_Vocals_vocals_noreverb_megumin_sov@5k_0vk.flac"
 $path = "$indir\春庭雪\4k无损春庭雪橙翼_Vocals_vocals_noreverb_sov@fritia_23.19ks_4k_0vk.flac"
-$path = "$indir\新月的摇篮曲 (其一)  伴月同眠\哥伦比娅 伴月同眠 - 测试服废案_Vocals_vocals_noreverb_爱诺_sov@0k_0vk_rift@aino_3.6ks_0k_-60.0st.flac"
+$path = "$indir\新月的摇篮曲 (其一)  伴月同眠\哥伦比娅 伴月同眠 - 测试服废案_Vocals_vocals_noreverb.flac"
+$path = "$indir\ツキアカリのミチシルベ\4K 60FPS黑之契约者 流星的双子 stereopony月光的指引_Vocals_vocals_sov@megumin_59.20ks_0k_0vk.flac"
+$path = "$indir\君は薔薇より美しい\布施明 君は薔薇より美しい 你比玫瑰更美丽_Vocals_vocals_noreverb_「少女」_sov@5k_0vk_16.8k.flac"
+$path = "${indir}/君は薔薇より美しい/君は薔薇より美しい_呼!_sov@「少女」_16.80ks_0k_0vk.flac"
 
-$key=0
-$vocal_key=0
+$key=12
+$vocal_key=3
 $formant_key=0
 
 & $python main_reflow.py -n $name -i "$path" -k $key -f $formant_key -v $vocal_key
@@ -149,7 +149,7 @@ def parse_args(args=None, namespace=None):
       "--pitch_extractor",
       type=str,
       required=False,
-      default='rmvpe',
+      default='fcpe',
       help="pitch extrator type: parselmouth, dio, harvest, crepe, fcpe, rmvpe (default)",
   )
   parser.add_argument(
@@ -227,7 +227,7 @@ def cross_fade(a: np.ndarray, b: np.ndarray, idx: int):
   return result
 
 
-step_patten = re.compile('(?<=model_)\d+')  # model_180000.pt
+step_patten = re.compile(r'(?<=model_)\d+')  # model_180000.pt
 def gen_metadata(args, ckpt, name):
   # ckpt = ckpt.removeprefix('model_').removesuffix('.pt')
   ckpt = args.model_ckpt.split('/')[-1]  # exp/megumin/model_228000.pt

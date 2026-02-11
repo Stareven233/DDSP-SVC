@@ -3,9 +3,9 @@ cd D:\Code\projects\DDSP-SVC
 $python='D:/Software/SVC-Fusion/project/.conda/python.exe'
 $python = 'D:/Code/projects/RIFT-SVC/.venv/Scripts/python.exe'
 
-$name='aino'
-# 数据输入在 $src_dir 里，切完了手动放到各自文件夹
+$name='「少女」'
 $src_dir="D:\Document\Audio\!raw\爱诺"
+# 数据输入在 $src_dir 里，切完了手动放到各自文件夹
 & $python util/fap/main.py slice-audio-v2 $src_dir "data/$name" --max-duration 15.0 --num-workers 2 --flat-layout --merge-short
 & $python preprocess.py -n $name data.f0_extractor=fcpe
 
